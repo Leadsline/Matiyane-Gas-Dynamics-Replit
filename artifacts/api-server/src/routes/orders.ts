@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { db, ordersTable, orderItemsTable } from "@workspace/db";
-import { eq, count, sum, sql } from "drizzle-orm";
+import { eq, count, sum } from "drizzle-orm";
 import { z } from "zod/v4";
 import { CreateOrderBody, GetOrderParams, GetOrderPayfastDataParams } from "@workspace/api-zod";
 import { PRODUCTS } from "./products";
 import { sendOrderEmails } from "../lib/email";
+import { syncOrderToHubspot } from "../lib/hubspot";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -26,7 +27,7 @@ router.get("/orders/summary", async (req, res) => {
     const [totalResult] = await db.select({ count: count() }).from(ordersTable);
     const [pendingResult] = await db.select({ count: count() }).from(ordersTable).where(eq(ordersTable.status, "pending"));
     const [completedResult] = await db.select({ count: count() }).from(ordersTable).where(eq(ordersTable.status, "completed"));
-    const [revenueResult] = await db.select({ total: sum(ordersTable.totalAmount) }).from(ordersTable).where(eq(ordersTable.status, "completed"));
+    const [revenueResult] = await db.select({ total: sum(ordersTable.totalAmount) }).from(ordersTable).where(eq(ordersTable.status, "paid"));
 
     res.json({
       totalOrders: totalResult.count,
@@ -52,7 +53,6 @@ router.post("/orders", async (req, res) => {
     return res.status(400).json({ error: "At least one item is required" });
   }
 
-  // Validate and calculate items
   const orderItems: { productId: number; productName: string; quantity: number; unitPrice: number; subtotal: number }[] = [];
   let productsTotal = 0;
 
@@ -64,67 +64,31 @@ router.post("/orders", async (req, res) => {
     }
     const subtotal = product.price * item.quantity;
     productsTotal += subtotal;
-    orderItems.push({
-      productId: product.id,
-      productName: product.name,
-      quantity: item.quantity,
-      unitPrice: product.price,
-      subtotal,
-    });
+    orderItems.push({ productId: product.id, productName: product.name, quantity: item.quantity, unitPrice: product.price, subtotal });
   }
 
   if (orderItems.length === 0) {
     return res.status(400).json({ error: "At least one item with quantity > 0 is required" });
   }
 
-  const deliveryFee = isKemptonPark(suburb) ? 0 : 0; // 0 for now; admin confirms non-KP fee
+  const deliveryFee = isKemptonPark(suburb) ? 0 : 0;
   const totalAmount = productsTotal + deliveryFee;
   const orderRef = generateOrderRef();
 
   try {
     const [newOrder] = await db
       .insert(ordersTable)
-      .values({
-        orderRef,
-        fullName,
-        phone,
-        email,
-        deliveryAddress,
-        suburb,
-        specialInstructions: specialInstructions ?? null,
-        status: "pending",
-        totalAmount: totalAmount.toFixed(2),
-        deliveryFee: deliveryFee.toFixed(2),
-      })
+      .values({ orderRef, fullName, phone, email, deliveryAddress, suburb, specialInstructions: specialInstructions ?? null, status: "pending", totalAmount: totalAmount.toFixed(2), deliveryFee: deliveryFee.toFixed(2) })
       .returning();
 
     const insertedItems = await db
       .insert(orderItemsTable)
-      .values(
-        orderItems.map((item) => ({
-          orderId: newOrder.id,
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice.toFixed(2),
-          subtotal: item.subtotal.toFixed(2),
-        }))
-      )
+      .values(orderItems.map((item) => ({ orderId: newOrder.id, productId: item.productId, productName: item.productName, quantity: item.quantity, unitPrice: item.unitPrice.toFixed(2), subtotal: item.subtotal.toFixed(2) })))
       .returning();
 
-    // Send emails (non-blocking)
-    sendOrderEmails({
-      orderRef,
-      fullName,
-      email,
-      phone,
-      deliveryAddress,
-      suburb,
-      specialInstructions,
-      items: orderItems,
-      totalAmount,
-      deliveryFee,
-    }).catch((err) => logger.error({ err }, "Email send failed"));
+    sendOrderEmails({ orderRef, fullName, email, phone, deliveryAddress, suburb, specialInstructions, items: orderItems, totalAmount, deliveryFee }).catch((err) => logger.error({ err }, "Email send failed"));
+
+    syncOrderToHubspot({ fullName, email, phone, orderRef, totalAmount }).catch((err) => logger.error({ err }, "HubSpot sync failed"));
 
     res.status(201).json({
       id: newOrder.id,
@@ -138,13 +102,7 @@ router.post("/orders", async (req, res) => {
       status: newOrder.status,
       totalAmount: parseFloat(newOrder.totalAmount),
       deliveryFee: parseFloat(newOrder.deliveryFee),
-      items: insertedItems.map((i) => ({
-        productId: i.productId,
-        productName: i.productName,
-        quantity: i.quantity,
-        unitPrice: parseFloat(i.unitPrice),
-        subtotal: parseFloat(i.subtotal),
-      })),
+      items: insertedItems.map((i) => ({ productId: i.productId, productName: i.productName, quantity: i.quantity, unitPrice: parseFloat(i.unitPrice), subtotal: parseFloat(i.subtotal) })),
       createdAt: newOrder.createdAt.toISOString(),
     });
   } catch (err) {
@@ -155,15 +113,11 @@ router.post("/orders", async (req, res) => {
 
 router.get("/orders/:id", async (req, res) => {
   const params = GetOrderParams.safeParse({ id: parseInt(req.params.id) });
-  if (!params.success) {
-    return res.status(400).json({ error: "Invalid order ID" });
-  }
+  if (!params.success) return res.status(400).json({ error: "Invalid order ID" });
 
   try {
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
     const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
 
@@ -179,13 +133,7 @@ router.get("/orders/:id", async (req, res) => {
       status: order.status,
       totalAmount: parseFloat(order.totalAmount),
       deliveryFee: parseFloat(order.deliveryFee),
-      items: items.map((i) => ({
-        productId: i.productId,
-        productName: i.productName,
-        quantity: i.quantity,
-        unitPrice: parseFloat(i.unitPrice),
-        subtotal: parseFloat(i.subtotal),
-      })),
+      items: items.map((i) => ({ productId: i.productId, productName: i.productName, quantity: i.quantity, unitPrice: parseFloat(i.unitPrice), subtotal: parseFloat(i.subtotal) })),
       createdAt: order.createdAt.toISOString(),
     });
   } catch (err) {
@@ -196,65 +144,86 @@ router.get("/orders/:id", async (req, res) => {
 
 router.get("/orders/:id/payfast", async (req, res) => {
   const params = GetOrderPayfastDataParams.safeParse({ id: parseInt(req.params.id) });
-  if (!params.success) {
-    return res.status(400).json({ error: "Invalid order ID" });
-  }
+  if (!params.success) return res.status(400).json({ error: "Invalid order ID" });
 
   try {
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
-    const isSandbox = process.env.PAYFAST_SANDBOX === "true" || process.env.NODE_ENV !== "production";
-    const merchantId = process.env.PAYFAST_MERCHANT_ID || "10000100";
-    const merchantKey = process.env.PAYFAST_MERCHANT_KEY || "46f0cd694581a";
+    const isSandbox = process.env["PAYFAST_SANDBOX"] === "true" || process.env["NODE_ENV"] !== "production";
+    const merchantId = process.env["PAYFAST_MERCHANT_ID"] || "10000100";
+    const merchantKey = process.env["PAYFAST_MERCHANT_KEY"] || "46f0cd694581a";
 
-    const domains = process.env.REPLIT_DOMAINS?.split(",")[0];
+    const domains = process.env["REPLIT_DOMAINS"]?.split(",")[0];
     const baseUrl = domains ? `https://${domains}` : "http://localhost:80";
 
-    const payfastUrl = isSandbox
-      ? "https://sandbox.payfast.co.za/eng/process"
-      : "https://www.payfast.co.za/eng/process";
-
+    const payfastUrl = isSandbox ? "https://sandbox.payfast.co.za/eng/process" : "https://www.payfast.co.za/eng/process";
     const nameParts = order.fullName.trim().split(" ");
     const nameFirst = nameParts[0] || order.fullName;
 
-    res.json({
-      merchantId,
-      merchantKey,
-      returnUrl: `${baseUrl}/order-success?ref=${order.orderRef}`,
-      cancelUrl: `${baseUrl}/order?cancelled=true`,
-      notifyUrl: `${baseUrl}/api/payfast/notify`,
-      nameFirst,
-      emailAddress: order.email,
-      mPaymentId: order.orderRef,
-      amount: parseFloat(order.totalAmount).toFixed(2),
-      itemName: `Matiyane Gas Order ${order.orderRef}`,
-      payfastUrl,
-    });
+    res.json({ merchantId, merchantKey, returnUrl: `${baseUrl}/order-success?ref=${order.orderRef}`, cancelUrl: `${baseUrl}/order?cancelled=true`, notifyUrl: `${baseUrl}/api/payfast/notify`, nameFirst, emailAddress: order.email, mPaymentId: order.orderRef, amount: parseFloat(order.totalAmount).toFixed(2), itemName: `Matiyane Gas Order ${order.orderRef}`, payfastUrl });
   } catch (err) {
     req.log.error({ err }, "Failed to get PayFast data");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// PayFast ITN (Instant Transfer Notification) handler
+router.get("/orders/:id/paystack", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid order ID" });
+
+  try {
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    const publicKey = process.env["PAYSTACK_PUBLIC_KEY"] || "pk_test_xxxxxx";
+    const domains = process.env["REPLIT_DOMAINS"]?.split(",")[0];
+    const baseUrl = domains ? `https://${domains}` : "http://localhost:80";
+
+    const amountKobo = Math.round(parseFloat(order.totalAmount) * 100);
+
+    res.json({
+      publicKey,
+      email: order.email,
+      amountKobo,
+      reference: `MGD-PS-${order.orderRef}`,
+      currency: "ZAR",
+      callbackUrl: `${baseUrl}/order-success?ref=${order.orderRef}&gateway=paystack`,
+      metadata: {
+        orderRef: order.orderRef,
+        customerName: order.fullName,
+      },
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to get Paystack data");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/payfast/notify", async (req, res) => {
-  // Acknowledge receipt
   res.status(200).send("OK");
-
   const { m_payment_id, payment_status } = req.body as { m_payment_id: string; payment_status: string };
-
   if (payment_status === "COMPLETE" && m_payment_id) {
     try {
-      await db
-        .update(ordersTable)
-        .set({ status: "paid", updatedAt: new Date() })
-        .where(eq(ordersTable.orderRef, m_payment_id));
+      await db.update(ordersTable).set({ status: "paid", updatedAt: new Date() }).where(eq(ordersTable.orderRef, m_payment_id));
       logger.info({ orderRef: m_payment_id }, "Order marked as paid via PayFast ITN");
     } catch (err) {
       logger.error({ err, orderRef: m_payment_id }, "Failed to update order status via PayFast ITN");
+    }
+  }
+});
+
+router.post("/paystack/webhook", async (req, res) => {
+  res.status(200).send("OK");
+  const event = req.body as { event: string; data?: { reference?: string } };
+  if (event.event === "charge.success" && event.data?.reference) {
+    const ref = event.data.reference;
+    const orderRef = ref.replace("MGD-PS-", "");
+    try {
+      await db.update(ordersTable).set({ status: "paid", updatedAt: new Date() }).where(eq(ordersTable.orderRef, orderRef));
+      logger.info({ orderRef }, "Order marked as paid via Paystack webhook");
+    } catch (err) {
+      logger.error({ err, orderRef }, "Failed to update order status via Paystack webhook");
     }
   }
 });

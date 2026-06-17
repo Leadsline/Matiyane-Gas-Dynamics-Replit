@@ -73,6 +73,21 @@ export interface PayfastData {
   payfastUrl: string;
 }
 
+export type PaystackDataMetadata = {
+  orderRef?: string;
+  customerName?: string;
+};
+
+export interface PaystackData {
+  publicKey: string;
+  email: string;
+  amountKobo: number;
+  reference: string;
+  currency: string;
+  callbackUrl: string;
+  metadata?: PaystackDataMetadata;
+}
+
 export interface OrderSummary {
   totalOrders: number;
   pendingOrders: number;
@@ -88,6 +103,54 @@ export interface ContactInput {
   message: string;
 }
 
+export interface AdminLoginInput {
+  password: string;
+}
+
+export interface AdminLoginResponse {
+  token: string;
+}
+
+export interface AdminOrdersResponse {
+  orders: Order[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  /** @nullable */
+  phone?: string | null;
+  message: string;
+  createdAt: string;
+}
+
+export interface AdminContactsResponse {
+  contacts: ContactMessage[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export type OrderStatusUpdateStatus = typeof OrderStatusUpdateStatus[keyof typeof OrderStatusUpdateStatus];
+
+
+export const OrderStatusUpdateStatus = {
+  pending: 'pending',
+  confirmed: 'confirmed',
+  out_for_delivery: 'out_for_delivery',
+  delivered: 'delivered',
+  paid: 'paid',
+  cancelled: 'cancelled',
+} as const;
+
+export interface OrderStatusUpdate {
+  status: OrderStatusUpdateStatus;
+}
+
 export interface SuccessResponse {
   message: string;
 }
@@ -95,4 +158,15 @@ export interface SuccessResponse {
 export interface ErrorResponse {
   error: string;
 }
+
+export type AdminListOrdersParams = {
+status?: string;
+page?: number;
+limit?: number;
+};
+
+export type AdminListContactsParams = {
+page?: number;
+limit?: number;
+};
 

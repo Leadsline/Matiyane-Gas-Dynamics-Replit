@@ -1,0 +1,2 @@
+- [Zod runtime in api-server](zod-api-server-runtime.md) — zod must be in api-server package.json dependencies (not just esbuild external) for ESM runtime resolution.
+- [Orval zod single-mode output path](orval-zod-single-mode.md) — with mode:"single" target:"generated/api", orval writes to generated/api/api.ts, not generated/api.ts.

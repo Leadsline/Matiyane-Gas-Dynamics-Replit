@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, contactMessagesTable } from "@workspace/db";
 import { SubmitContactBody } from "@workspace/api-zod";
 import { sendContactEmail } from "../lib/email";
+import { syncContactToHubspot } from "../lib/hubspot";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -15,17 +16,11 @@ router.post("/contact", async (req, res) => {
   const { name, email, phone, message } = parsed.data;
 
   try {
-    await db.insert(contactMessagesTable).values({
-      name,
-      email,
-      phone: phone ?? null,
-      message,
-    });
+    await db.insert(contactMessagesTable).values({ name, email, phone: phone ?? null, message });
 
-    // Send email notification (non-blocking)
-    sendContactEmail(name, email, phone ?? undefined, message).catch((err) =>
-      logger.error({ err }, "Contact email send failed")
-    );
+    sendContactEmail(name, email, phone ?? undefined, message).catch((err) => logger.error({ err }, "Contact email send failed"));
+
+    syncContactToHubspot({ name, email, phone: phone ?? undefined, message }).catch((err) => logger.error({ err }, "HubSpot contact sync failed"));
 
     res.json({ message: "Message received. We will get back to you shortly." });
   } catch (err) {
