@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Matiyane Gas Distributors API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: orders
+    description: Gas order operations
+  - name: contact
+    description: Contact form operations
+  - name: products
+    description: Products operations
 paths:
   /healthz:
     get:
@@ -24,6 +30,135 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all gas products
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /orders:
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create a new gas order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get order by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/{id}/payfast:
+    get:
+      operationId: getOrderPayfastData
+      tags: [orders]
+      summary: Get PayFast payment data for an order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: PayFast payment form data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayfastData"
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/summary:
+    get:
+      operationId: getOrderSummary
+      tags: [orders]
+      summary: Get order statistics summary
+      responses:
+        "200":
+          description: Order summary statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderSummary"
+
+  /contact:
+    post:
+      operationId: submitContact
+      tags: [contact]
+      summary: Submit contact form
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "200":
+          description: Contact form submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +169,212 @@ components:
       required:
         - status
 
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        unit:
+          type: string
+        inStock:
+          type: boolean
+      required:
+        - id
+        - name
+        - description
+        - price
+        - unit
+        - inStock
+
+    OrderItem:
+      type: object
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        subtotal:
+          type: number
+      required:
+        - productId
+        - productName
+        - quantity
+        - unitPrice
+        - subtotal
+
+    OrderInput:
+      type: object
+      properties:
+        fullName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        deliveryAddress:
+          type: string
+        suburb:
+          type: string
+        specialInstructions:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+              quantity:
+                type: integer
+            required:
+              - productId
+              - quantity
+      required:
+        - fullName
+        - phone
+        - email
+        - deliveryAddress
+        - suburb
+        - items
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderRef:
+          type: string
+        fullName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        deliveryAddress:
+          type: string
+        suburb:
+          type: string
+        specialInstructions:
+          type: ["string", "null"]
+        status:
+          type: string
+        totalAmount:
+          type: number
+        deliveryFee:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        createdAt:
+          type: string
+      required:
+        - id
+        - orderRef
+        - fullName
+        - phone
+        - email
+        - deliveryAddress
+        - suburb
+        - status
+        - totalAmount
+        - deliveryFee
+        - items
+        - createdAt
+
+    PayfastData:
+      type: object
+      properties:
+        merchantId:
+          type: string
+        merchantKey:
+          type: string
+        returnUrl:
+          type: string
+        cancelUrl:
+          type: string
+        notifyUrl:
+          type: string
+        nameFirst:
+          type: string
+        emailAddress:
+          type: string
+        mPaymentId:
+          type: string
+        amount:
+          type: string
+        itemName:
+          type: string
+        payfastUrl:
+          type: string
+      required:
+        - merchantId
+        - merchantKey
+        - returnUrl
+        - cancelUrl
+        - notifyUrl
+        - nameFirst
+        - emailAddress
+        - mPaymentId
+        - amount
+        - itemName
+        - payfastUrl
+
+    OrderSummary:
+      type: object
+      properties:
+        totalOrders:
+          type: integer
+        pendingOrders:
+          type: integer
+        completedOrders:
+          type: integer
+        totalRevenue:
+          type: number
+      required:
+        - totalOrders
+        - pendingOrders
+        - completedOrders
+        - totalRevenue
+
+    ContactInput:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        message:
+          type: string
+      required:
+        - name
+        - email
+        - message
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

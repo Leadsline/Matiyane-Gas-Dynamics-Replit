@@ -1,0 +1,432 @@
+import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
+import { FadeIn } from "@/components/ui/fade-in";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useCreateOrder, useListProducts, useGetOrderPayfastData } from "@workspace/api-client-react";
+import { ShoppingCart, Plus, Minus, Truck, CheckCircle, AlertCircle, Loader2, CreditCard } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface OrderItem {
+  productId: number;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+interface PlacedOrder {
+  id: number;
+  orderRef: string;
+  totalAmount: number;
+  items: OrderItem[];
+}
+
+const KEMPTON_PARK_KEYWORDS = ["kempton", "glen marais", "glen place", "birchleigh", "norkem", "esther"];
+
+function isKemptonPark(suburb: string) {
+  return KEMPTON_PARK_KEYWORDS.some((k) => suburb.toLowerCase().includes(k));
+}
+
+function PayFastRedirectForm({ orderId }: { orderId: number }) {
+  const { data: payfastData, isLoading, error } = useGetOrderPayfastData(orderId, {
+    query: { enabled: !!orderId, queryKey: [`payfast-${orderId}`] as unknown as readonly unknown[] },
+  });
+  const formRef = useRef<HTMLFormElement>(null);
+  const [autoSubmitting, setAutoSubmitting] = useState(false);
+
+  const handleRedirect = () => {
+    if (formRef.current && payfastData) {
+      setAutoSubmitting(true);
+      formRef.current.submit();
+    }
+  };
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center gap-3 py-4 text-muted-foreground">
+      <Loader2 className="animate-spin w-5 h-5" />
+      <span>Preparing payment...</span>
+    </div>
+  );
+
+  if (error || !payfastData) return (
+    <p className="text-sm text-muted-foreground text-center py-2">
+      Payment gateway unavailable. Please call us to complete your order.
+    </p>
+  );
+
+  return (
+    <div>
+      <form ref={formRef} action={payfastData.payfastUrl} method="POST" className="hidden">
+        <input type="hidden" name="merchant_id" value={payfastData.merchantId} />
+        <input type="hidden" name="merchant_key" value={payfastData.merchantKey} />
+        <input type="hidden" name="return_url" value={payfastData.returnUrl} />
+        <input type="hidden" name="cancel_url" value={payfastData.cancelUrl} />
+        <input type="hidden" name="notify_url" value={payfastData.notifyUrl} />
+        <input type="hidden" name="name_first" value={payfastData.nameFirst} />
+        <input type="hidden" name="email_address" value={payfastData.emailAddress} />
+        <input type="hidden" name="m_payment_id" value={payfastData.mPaymentId} />
+        <input type="hidden" name="amount" value={payfastData.amount} />
+        <input type="hidden" name="item_name" value={payfastData.itemName} />
+      </form>
+      <Button
+        size="lg"
+        className="w-full bg-[#00539b] hover:bg-[#003f75] text-white font-bold rounded-full py-4 text-base"
+        onClick={handleRedirect}
+        disabled={autoSubmitting}
+      >
+        {autoSubmitting ? (
+          <><Loader2 className="animate-spin mr-2 w-5 h-5" /> Redirecting to PayFast...</>
+        ) : (
+          <><CreditCard className="mr-2 w-5 h-5" /> Pay Securely with PayFast — R{payfastData.amount}</>
+        )}
+      </Button>
+      <p className="text-xs text-center text-muted-foreground mt-3">Secured by PayFast. You will be redirected to a secure payment page.</p>
+    </div>
+  );
+}
+
+export default function OrderPage() {
+  const [searchParams] = useLocation();
+  const { toast } = useToast();
+  const { data: products } = useListProducts();
+  const createOrder = useCreateOrder();
+
+  const displayProducts = products || [
+    { id: 1, name: "5kg Gas Refill", price: 150, unit: "5kg" },
+    { id: 2, name: "9kg Gas Refill", price: 250, unit: "9kg" },
+    { id: 3, name: "19kg Gas Refill", price: 490, unit: "19kg" },
+    { id: 4, name: "48kg Gas Refill", price: 1250, unit: "48kg" },
+  ];
+
+  const [quantities, setQuantities] = useState<Record<number, number>>({ 1: 0, 2: 0, 3: 0, 4: 0 });
+  const [form, setForm] = useState({ fullName: "", phone: "", email: "", deliveryAddress: "", suburb: "", specialInstructions: "" });
+  const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Pre-select product from URL query
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const productId = parseInt(params.get("product") || "0");
+    if (productId >= 1 && productId <= 4) {
+      setQuantities((prev) => ({ ...prev, [productId]: 1 }));
+    }
+  }, []);
+
+  const updateQuantity = (productId: number, delta: number) => {
+    setQuantities((prev) => ({ ...prev, [productId]: Math.max(0, (prev[productId] || 0) + delta) }));
+  };
+
+  const orderItems = displayProducts
+    .filter((p) => quantities[p.id] > 0)
+    .map((p) => ({ productId: p.id, productName: p.name, quantity: quantities[p.id], unitPrice: p.price, subtotal: p.price * quantities[p.id] }));
+
+  const productsTotal = orderItems.reduce((sum, i) => sum + i.subtotal, 0);
+  const freeDelivery = form.suburb ? isKemptonPark(form.suburb) : null;
+  const deliveryFee = 0;
+  const totalAmount = productsTotal + deliveryFee;
+
+  const validate = () => {
+    const errs: Record<string, string> = {};
+    if (!form.fullName.trim()) errs.fullName = "Full name is required";
+    if (!form.phone.trim()) errs.phone = "Phone number is required";
+    if (!/^[0-9+\s\-()]{7,}$/.test(form.phone.trim())) errs.phone = "Enter a valid phone number";
+    if (!form.email.trim()) errs.email = "Email address is required";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = "Enter a valid email address";
+    if (!form.deliveryAddress.trim()) errs.deliveryAddress = "Delivery address is required";
+    if (!form.suburb.trim()) errs.suburb = "Suburb is required";
+    if (orderItems.length === 0) errs.items = "Please add at least one product to your order";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    try {
+      const order = await createOrder.mutateAsync({
+        data: {
+          fullName: form.fullName,
+          phone: form.phone,
+          email: form.email,
+          deliveryAddress: form.deliveryAddress,
+          suburb: form.suburb,
+          specialInstructions: form.specialInstructions || null,
+          items: orderItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        },
+      });
+      setPlacedOrder(order as unknown as PlacedOrder);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      toast({ title: "Order failed", description: "Something went wrong. Please try again or call us directly.", variant: "destructive" });
+    }
+  };
+
+  if (placedOrder) {
+    return (
+      <main className="pt-20 min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-16 max-w-2xl">
+          <div className="bg-white rounded-3xl p-10 border border-border shadow-lg text-center">
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-10 h-10 text-green-500" />
+            </div>
+            <h1 className="text-3xl font-extrabold text-primary mb-2">Order Placed!</h1>
+            <p className="text-muted-foreground mb-6">A confirmation email has been sent to {form.email}</p>
+
+            <div className="bg-gray-50 rounded-2xl p-6 mb-8 text-left">
+              <p className="text-sm text-muted-foreground mb-1">Your Order Reference</p>
+              <p className="text-2xl font-extrabold text-secondary">{placedOrder.orderRef}</p>
+            </div>
+
+            <div className="text-left mb-8">
+              <h3 className="font-bold text-primary mb-3">Order Summary</h3>
+              {(placedOrder.items || orderItems).map((item) => (
+                <div key={item.productId} className="flex justify-between py-2 border-b border-border text-sm">
+                  <span>{item.productName} x{item.quantity}</span>
+                  <span className="font-semibold">R{item.subtotal.toFixed(2)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between pt-3 font-bold text-primary text-lg">
+                <span>Total</span>
+                <span>R{placedOrder.totalAmount?.toFixed(2) || totalAmount.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <PayFastRedirectForm orderId={placedOrder.id} />
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-6 text-sm text-amber-800">
+              <p className="font-semibold mb-1">What happens next?</p>
+              <p>Complete payment above, or our team will contact you at {form.phone} to arrange delivery and payment details.</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="pt-20 min-h-screen bg-gray-50">
+      {/* Header */}
+      <section className="bg-primary text-white py-16">
+        <div className="container mx-auto px-4">
+          <FadeIn direction="up">
+            <span className="text-secondary font-semibold uppercase tracking-widest text-sm">Order Gas</span>
+            <h1 className="text-5xl font-extrabold mt-2 mb-3">Place Your Order</h1>
+            <p className="text-white/70 text-lg">Select your products and fill in your details. We'll deliver to your door.</p>
+          </FadeIn>
+        </div>
+      </section>
+
+      <form onSubmit={handleSubmit}>
+        <div className="container mx-auto px-4 py-12 max-w-6xl">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left: Products + Form */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Product Selection */}
+              <FadeIn direction="up">
+                <div className="bg-white rounded-2xl p-8 border border-border shadow-sm">
+                  <h2 className="text-2xl font-extrabold text-primary mb-2 flex items-center gap-3">
+                    <ShoppingCart className="w-6 h-6 text-secondary" />
+                    Select Products
+                  </h2>
+                  <p className="text-muted-foreground text-sm mb-6">Choose the sizes and quantities you need.</p>
+
+                  {errors.items && (
+                    <div className="flex items-center gap-2 text-destructive text-sm mb-4 bg-destructive/10 rounded-lg p-3">
+                      <AlertCircle size={16} />
+                      {errors.items}
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {displayProducts.map((product) => (
+                      <div key={product.id} className={`flex items-center justify-between p-5 rounded-xl border transition-all ${quantities[product.id] > 0 ? "border-secondary bg-secondary/5" : "border-border hover:border-primary/30"}`}>
+                        <div className="flex-1">
+                          <p className="font-bold text-primary">{product.name}</p>
+                          <p className="text-secondary font-semibold text-sm">R{product.price} each</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(product.id, -1)}
+                            className="w-9 h-9 rounded-full border-2 border-border hover:border-primary flex items-center justify-center transition-colors disabled:opacity-30"
+                            disabled={quantities[product.id] === 0}
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="w-8 text-center font-bold text-lg text-primary">{quantities[product.id] || 0}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(product.id, 1)}
+                            className="w-9 h-9 rounded-full bg-primary text-white hover:bg-secondary flex items-center justify-center transition-colors"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                        {quantities[product.id] > 0 && (
+                          <div className="ml-4 text-right min-w-[70px]">
+                            <p className="font-bold text-primary">R{(product.price * quantities[product.id]).toFixed(0)}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </FadeIn>
+
+              {/* Customer Details */}
+              <FadeIn direction="up" delay={100}>
+                <div className="bg-white rounded-2xl p-8 border border-border shadow-sm">
+                  <h2 className="text-2xl font-extrabold text-primary mb-6">Your Details</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <Label htmlFor="fullName" className="font-semibold text-sm mb-1.5 block">Full Name *</Label>
+                      <Input
+                        id="fullName"
+                        placeholder="e.g. John Dlamini"
+                        value={form.fullName}
+                        onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
+                        className={errors.fullName ? "border-destructive" : ""}
+                      />
+                      {errors.fullName && <p className="text-destructive text-xs mt-1">{errors.fullName}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="phone" className="font-semibold text-sm mb-1.5 block">Phone Number *</Label>
+                      <Input
+                        id="phone"
+                        placeholder="e.g. 076 748 8597"
+                        value={form.phone}
+                        onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                        className={errors.phone ? "border-destructive" : ""}
+                      />
+                      {errors.phone && <p className="text-destructive text-xs mt-1">{errors.phone}</p>}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="email" className="font-semibold text-sm mb-1.5 block">Email Address *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="e.g. john@example.com"
+                        value={form.email}
+                        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                        className={errors.email ? "border-destructive" : ""}
+                      />
+                      {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="deliveryAddress" className="font-semibold text-sm mb-1.5 block">Delivery Address *</Label>
+                      <Input
+                        id="deliveryAddress"
+                        placeholder="e.g. 12 Main Street"
+                        value={form.deliveryAddress}
+                        onChange={(e) => setForm((f) => ({ ...f, deliveryAddress: e.target.value }))}
+                        className={errors.deliveryAddress ? "border-destructive" : ""}
+                      />
+                      {errors.deliveryAddress && <p className="text-destructive text-xs mt-1">{errors.deliveryAddress}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="suburb" className="font-semibold text-sm mb-1.5 block">Suburb *</Label>
+                      <Input
+                        id="suburb"
+                        placeholder="e.g. Kempton Park"
+                        value={form.suburb}
+                        onChange={(e) => setForm((f) => ({ ...f, suburb: e.target.value }))}
+                        className={errors.suburb ? "border-destructive" : ""}
+                      />
+                      {errors.suburb && <p className="text-destructive text-xs mt-1">{errors.suburb}</p>}
+                      {form.suburb && (
+                        <p className={`text-xs mt-1.5 font-medium ${isKemptonPark(form.suburb) ? "text-green-600" : "text-amber-600"}`}>
+                          {isKemptonPark(form.suburb)
+                            ? "Free delivery applies to your area!"
+                            : "Delivery fee will be confirmed for your area."}
+                        </p>
+                      )}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="instructions" className="font-semibold text-sm mb-1.5 block">Special Instructions (optional)</Label>
+                      <Textarea
+                        id="instructions"
+                        placeholder="e.g. Ring doorbell, leave at gate, specific time preference..."
+                        value={form.specialInstructions}
+                        onChange={(e) => setForm((f) => ({ ...f, specialInstructions: e.target.value }))}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+            </div>
+
+            {/* Right: Order Summary */}
+            <div className="lg:col-span-1">
+              <FadeIn direction="left" delay={200}>
+                <div className="bg-white rounded-2xl p-8 border border-border shadow-sm sticky top-24">
+                  <h2 className="text-xl font-extrabold text-primary mb-6">Order Summary</h2>
+
+                  {orderItems.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <ShoppingCart className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">No items selected yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 mb-6">
+                      {orderItems.map((item) => (
+                        <div key={item.productId} className="flex justify-between text-sm">
+                          <div>
+                            <p className="font-medium text-foreground">{item.productName}</p>
+                            <p className="text-muted-foreground">x{item.quantity} @ R{item.unitPrice}</p>
+                          </div>
+                          <span className="font-semibold text-primary">R{item.subtotal.toFixed(0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="border-t border-border pt-4 space-y-2">
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Products</span>
+                      <span>R{productsTotal.toFixed(0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="flex items-center gap-1.5 text-muted-foreground"><Truck size={14} /> Delivery</span>
+                      <span className={freeDelivery === false ? "text-amber-600 font-medium" : "text-green-600 font-medium"}>
+                        {freeDelivery === null ? "TBC" : freeDelivery ? "FREE" : "TBC"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-extrabold text-lg text-primary pt-2 border-t border-border">
+                      <span>Total</span>
+                      <span>R{totalAmount.toFixed(0)}</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full mt-6 bg-secondary text-white hover:bg-secondary/90 font-bold rounded-full py-4 text-base"
+                    disabled={createOrder.isPending || orderItems.length === 0}
+                  >
+                    {createOrder.isPending ? (
+                      <><Loader2 className="animate-spin mr-2 w-5 h-5" /> Placing Order...</>
+                    ) : (
+                      <>Place Order — R{totalAmount.toFixed(0)}</>
+                    )}
+                  </Button>
+
+                  <div className="mt-5 flex items-start gap-2 text-xs text-muted-foreground bg-gray-50 rounded-xl p-4">
+                    <CheckCircle size={13} className="text-green-500 mt-0.5 shrink-0" />
+                    <span>You'll receive a confirmation email and we'll contact you to confirm delivery time.</span>
+                  </div>
+                </div>
+              </FadeIn>
+            </div>
+          </div>
+        </div>
+      </form>
+    </main>
+  );
+}
