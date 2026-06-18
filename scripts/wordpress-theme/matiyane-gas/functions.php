@@ -33,6 +33,47 @@ function mgd_menus() {
 }
 add_action('admin_menu', 'mgd_menus');
 
+// ── Order Tracking AJAX ───────────────────────────────────────────────────────
+function mgd_track_order_ajax() {
+    check_ajax_referer('mgd_nonce', '_wpnonce');
+
+    global $wpdb;
+    $ref = strtoupper(sanitize_text_field($_GET['ref'] ?? ''));
+    if (!$ref) {
+        wp_send_json_error('Order reference is required.', 400);
+    }
+
+    $order = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, order_ref, status, total_amount, items, created_at FROM {$wpdb->prefix}mgd_orders WHERE order_ref = %s",
+        $ref
+    ));
+
+    if (!$order) {
+        wp_send_json_error('Order not found. Please check your reference number.', 404);
+    }
+
+    $raw_items = json_decode($order->items, true) ?: [];
+    $items = array_map(function($i) {
+        return [
+            'productId'   => $i['productId']   ?? 0,
+            'productName' => $i['productName']  ?? '',
+            'quantity'    => $i['quantity']     ?? 0,
+            'unitPrice'   => floatval($i['unitPrice']  ?? 0),
+            'subtotal'    => floatval($i['subtotal']   ?? 0),
+        ];
+    }, $raw_items);
+
+    wp_send_json_success([
+        'orderRef'    => $order->order_ref,
+        'status'      => $order->status,
+        'totalAmount' => floatval($order->total_amount),
+        'createdAt'   => $order->created_at,
+        'items'       => $items,
+    ]);
+}
+add_action('wp_ajax_mgd_track_order',        'mgd_track_order_ajax');
+add_action('wp_ajax_nopriv_mgd_track_order', 'mgd_track_order_ajax');
+
 // ── Database Tables ──────────────────────────────────────────────────────────
 function mgd_create_tables() {
     global $wpdb;

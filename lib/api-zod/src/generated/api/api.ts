@@ -121,6 +121,28 @@ export const GetOrderPaystackDataResponse = zod.object({
 
 
 /**
+ * @summary Track an order by reference number
+ */
+export const TrackOrderQueryParams = zod.object({
+  "ref": zod.coerce.string().describe('Order reference (e.g. MGD-XXXXX-XXXX)')
+})
+
+export const TrackOrderResponse = zod.object({
+  "orderRef": zod.string(),
+  "status": zod.string(),
+  "totalAmount": zod.number(),
+  "createdAt": zod.string(),
+  "items": zod.array(zod.object({
+  "productId": zod.number(),
+  "productName": zod.string(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number(),
+  "subtotal": zod.number()
+}))
+})
+
+
+/**
  * @summary Get order statistics summary
  */
 export const GetOrderSummaryResponse = zod.object({

@@ -10,6 +10,7 @@ import OrderPage from "@/pages/order";
 import ContactPage from "@/pages/contact";
 import OrderSuccessPage from "@/pages/order-success";
 import AdminPage from "@/pages/admin";
+import TrackOrderPage from "@/pages/track-order";
 import { NotificationBar } from "@/components/layout/NotificationBar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/order" component={() => <Layout><OrderPage /></Layout>} />
       <Route path="/contact" component={() => <Layout><ContactPage /></Layout>} />
       <Route path="/order-success" component={() => <Layout><OrderSuccessPage /></Layout>} />
+      <Route path="/track-order" component={() => <Layout><TrackOrderPage /></Layout>} />
       <Route path="/admin" component={AdminPage} />
       <Route component={NotFound} />
     </Switch>

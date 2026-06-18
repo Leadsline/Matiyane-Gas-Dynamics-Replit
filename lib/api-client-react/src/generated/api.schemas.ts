@@ -42,6 +42,14 @@ export interface OrderInput {
   items: OrderInputItemsItem[];
 }
 
+export interface TrackOrderResult {
+  orderRef: string;
+  status: string;
+  totalAmount: number;
+  createdAt: string;
+  items: OrderItem[];
+}
+
 export interface Order {
   id: number;
   orderRef: string;
@@ -158,6 +166,13 @@ export interface SuccessResponse {
 export interface ErrorResponse {
   error: string;
 }
+
+export type TrackOrderParams = {
+/**
+ * Order reference (e.g. MGD-XXXXX-XXXX)
+ */
+ref: string;
+};
 
 export type AdminListOrdersParams = {
 status?: string;

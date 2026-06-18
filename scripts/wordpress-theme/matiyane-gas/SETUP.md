@@ -48,6 +48,7 @@ Create the following pages in **WordPress Admin → Pages → Add New**:
 | Products        | `products`      | Page: Products       |
 | Order Gas       | `order-gas`     | Page: Order Gas      |
 | Order Success   | `order-success` | Page: Order Success  |
+| Track Order     | `track-order`   | Page: Track Order    |
 | Contact Us      | `contact`       | Page: Contact        |
 
 **Set the Homepage:**

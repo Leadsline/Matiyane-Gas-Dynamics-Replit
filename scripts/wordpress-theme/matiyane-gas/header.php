@@ -27,6 +27,7 @@
                 <li><a href="<?php echo esc_url(home_url('/')); ?>" class="<?php echo is_front_page() ? 'current-menu-item' : ''; ?>">Home</a></li>
                 <li><a href="<?php echo esc_url(home_url('/about/')); ?>" class="<?php echo is_page('about') ? 'current-menu-item' : ''; ?>">About Us</a></li>
                 <li><a href="<?php echo esc_url(home_url('/products/')); ?>" class="<?php echo is_page('products') ? 'current-menu-item' : ''; ?>">Products</a></li>
+                <li><a href="<?php echo esc_url(home_url('/track-order/')); ?>" class="<?php echo is_page('track-order') ? 'current-menu-item' : ''; ?>">Track Order</a></li>
                 <li><a href="<?php echo esc_url(home_url('/contact/')); ?>" class="<?php echo is_page('contact') ? 'current-menu-item' : ''; ?>">Contact</a></li>
                 <li><a href="<?php echo esc_url(home_url('/order-gas/')); ?>" class="nav-cta">Order Now</a></li>
             </ul>

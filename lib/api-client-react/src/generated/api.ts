@@ -36,7 +36,9 @@ import type {
   PayfastData,
   PaystackData,
   Product,
-  SuccessResponse
+  SuccessResponse,
+  TrackOrderParams,
+  TrackOrderResult
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -496,6 +498,90 @@ export function useGetOrderPaystackData<TData = Awaited<ReturnType<typeof getOrd
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetOrderPaystackDataQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getTrackOrderUrl = (params: TrackOrderParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/orders/track?${stringifiedParams}` : `/api/orders/track`
+}
+
+/**
+ * @summary Track an order by reference number
+ */
+export const trackOrder = async (params: TrackOrderParams, options?: RequestInit): Promise<TrackOrderResult> => {
+
+  return customFetch<TrackOrderResult>(getTrackOrderUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getTrackOrderQueryKey = (params?: TrackOrderParams,) => {
+    return [
+    `/api/orders/track`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getTrackOrderQueryOptions = <TData = Awaited<ReturnType<typeof trackOrder>>, TError = ErrorType<ErrorResponse>>(params: TrackOrderParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof trackOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getTrackOrderQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof trackOrder>>> = ({ signal }) => trackOrder(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof trackOrder>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type TrackOrderQueryResult = NonNullable<Awaited<ReturnType<typeof trackOrder>>>
+export type TrackOrderQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Track an order by reference number
+ */
+
+export function useTrackOrder<TData = Awaited<ReturnType<typeof trackOrder>>, TError = ErrorType<ErrorResponse>>(
+ params: TrackOrderParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof trackOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getTrackOrderQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

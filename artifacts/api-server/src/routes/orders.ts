@@ -111,6 +111,35 @@ router.post("/orders", async (req, res) => {
   }
 });
 
+router.get("/orders/track", async (req, res) => {
+  const ref = (req.query["ref"] as string | undefined)?.trim().toUpperCase();
+  if (!ref) return res.status(400).json({ error: "ref query parameter is required" });
+
+  try {
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.orderRef, ref));
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+
+    res.json({
+      orderRef: order.orderRef,
+      status: order.status,
+      totalAmount: parseFloat(order.totalAmount),
+      createdAt: order.createdAt.toISOString(),
+      items: items.map((i) => ({
+        productId: i.productId,
+        productName: i.productName,
+        quantity: i.quantity,
+        unitPrice: parseFloat(i.unitPrice),
+        subtotal: parseFloat(i.subtotal),
+      })),
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to track order");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/orders/:id", async (req, res) => {
   const params = GetOrderParams.safeParse({ id: parseInt(req.params.id) });
   if (!params.success) return res.status(400).json({ error: "Invalid order ID" });

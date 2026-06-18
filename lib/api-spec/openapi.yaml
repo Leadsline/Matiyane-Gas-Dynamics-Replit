@@ -148,6 +148,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /orders/track:
+    get:
+      operationId: trackOrder
+      tags: [orders]
+      summary: Track an order by reference number
+      parameters:
+        - name: ref
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Order reference (e.g. MGD-XXXXX-XXXX)
+      responses:
+        "200":
+          description: Order tracking details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackOrderResult"
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /orders/summary:
     get:
       operationId: getOrderSummary
@@ -392,6 +418,28 @@ components:
         - email
         - deliveryAddress
         - suburb
+        - items
+
+    TrackOrderResult:
+      type: object
+      properties:
+        orderRef:
+          type: string
+        status:
+          type: string
+        totalAmount:
+          type: number
+        createdAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+      required:
+        - orderRef
+        - status
+        - totalAmount
+        - createdAt
         - items
 
     Order:

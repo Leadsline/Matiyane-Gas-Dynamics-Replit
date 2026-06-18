@@ -13,6 +13,7 @@
                     <li><a href="<?php echo esc_url(home_url('/about/')); ?>">About Us</a></li>
                     <li><a href="<?php echo esc_url(home_url('/products/')); ?>">Products</a></li>
                     <li><a href="<?php echo esc_url(home_url('/order-gas/')); ?>">Order Gas</a></li>
+                    <li><a href="<?php echo esc_url(home_url('/track-order/')); ?>">Track Order</a></li>
                     <li><a href="<?php echo esc_url(home_url('/contact/')); ?>">Contact Us</a></li>
                 </ul>
             </div>
