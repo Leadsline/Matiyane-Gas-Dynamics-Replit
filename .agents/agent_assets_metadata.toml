@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "co3lC0GL9R1pOVePx1WdN"
+uri = "file://matiyane-gas-wordpress-theme.zip"
+type = "unspecified"
+title = "Matiyane Gas — WordPress Theme (ZIP)"
