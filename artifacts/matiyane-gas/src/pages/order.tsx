@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCreateOrder, useListProducts, useGetOrderPayfastData, useGetOrderPaystackData } from "@workspace/api-client-react";
 import { ShoppingCart, Plus, Minus, Truck, CheckCircle, AlertCircle, Loader2, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { UsageEstimatorCompact } from "@/components/ui/usage-estimator-compact";
+import { GasLevelDetector } from "@/components/ui/gas-level-detector";
 
 interface OrderItem {
   productId: number;
@@ -152,13 +154,16 @@ export default function OrderPage() {
   const createOrder = useCreateOrder();
 
   const displayProducts = products || [
-    { id: 1, name: "5kg Gas Refill", price: 150, unit: "5kg" },
-    { id: 2, name: "9kg Gas Refill", price: 250, unit: "9kg" },
-    { id: 3, name: "19kg Gas Refill", price: 490, unit: "19kg" },
-    { id: 4, name: "48kg Gas Refill", price: 1250, unit: "48kg" },
+    { id: 1, name: "5kg Gas Refill",     price: 150,  unit: "5kg"    },
+    { id: 2, name: "9kg Gas Refill",     price: 250,  unit: "9kg"    },
+    { id: 3, name: "19kg Gas Refill",    price: 490,  unit: "19kg"   },
+    { id: 4, name: "48kg Gas Refill",    price: 1250, unit: "48kg"   },
+    { id: 5, name: "Gas Level Detector", price: 299,  unit: "device" },
   ];
 
-  const [quantities, setQuantities] = useState<Record<number, number>>({ 1: 0, 2: 0, 3: 0, 4: 0 });
+  const GAS_CYLINDER_KG: Record<number, number> = { 1: 5, 2: 9, 3: 19, 4: 48 };
+
+  const [quantities, setQuantities] = useState<Record<number, number>>({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
   const [form, setForm] = useState({ fullName: "", phone: "", email: "", deliveryAddress: "", suburb: "", specialInstructions: "" });
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -166,7 +171,7 @@ export default function OrderPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const productId = parseInt(params.get("product") || "0");
-    if (productId >= 1 && productId <= 4) {
+    if (productId >= 1 && productId <= 5) {
       setQuantities((prev) => ({ ...prev, [productId]: 1 }));
     }
   }, []);
@@ -271,39 +276,72 @@ export default function OrderPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               <FadeIn direction="up">
+                {/* Usage Estimator — compact accordion */}
+                <UsageEstimatorCompact
+                  onSetQty={(id, qty) => setQuantities((prev) => ({ ...prev, [id]: Math.max(prev[id] || 0, qty) }))}
+                />
+              </FadeIn>
+
+              <FadeIn direction="up">
                 <div className="bg-white rounded-2xl p-8 border border-border shadow-sm">
                   <h2 className="text-2xl font-extrabold text-primary mb-2 flex items-center gap-3">
                     <ShoppingCart className="w-6 h-6 text-secondary" /> Select Products
                   </h2>
-                  <p className="text-muted-foreground text-sm mb-6">Choose sizes and quantities.</p>
+                  <p className="text-muted-foreground text-sm mb-6">Choose sizes and quantities. Add a Gas Level Detector to always know when to reorder.</p>
                   {errors.items && (
                     <div className="flex items-center gap-2 text-destructive text-sm mb-4 bg-destructive/10 rounded-lg p-3">
                       <AlertCircle size={16} />{errors.items}
                     </div>
                   )}
                   <div className="space-y-4">
-                    {displayProducts.map((product) => (
-                      <div key={product.id} className={`flex items-center justify-between p-5 rounded-xl border transition-all ${quantities[product.id] > 0 ? "border-secondary bg-secondary/5" : "border-border hover:border-primary/30"}`}>
-                        <div className="flex-1">
-                          <p className="font-bold text-primary">{product.name}</p>
-                          <p className="text-secondary font-semibold text-sm">R{product.price} each</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button type="button" onClick={() => updateQuantity(product.id, -1)} className="w-9 h-9 rounded-full border-2 border-border hover:border-primary flex items-center justify-center transition-colors disabled:opacity-30" disabled={quantities[product.id] === 0}>
-                            <Minus size={14} />
-                          </button>
-                          <span className="w-8 text-center font-bold text-lg text-primary">{quantities[product.id] || 0}</span>
-                          <button type="button" onClick={() => updateQuantity(product.id, 1)} className="w-9 h-9 rounded-full bg-primary text-white hover:bg-secondary flex items-center justify-center transition-colors">
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                        {quantities[product.id] > 0 && (
-                          <div className="ml-4 text-right min-w-[70px]">
-                            <p className="font-bold text-primary">R{(product.price * quantities[product.id]).toFixed(0)}</p>
+                    {displayProducts.map((product) => {
+                      const isDetector = product.id === 5;
+                      const cylinderKg = GAS_CYLINDER_KG[product.id];
+                      return (
+                        <div key={product.id}>
+                          <div className={`flex items-center justify-between p-5 rounded-xl border transition-all ${quantities[product.id] > 0 ? "border-secondary bg-secondary/5" : "border-border hover:border-primary/30"} ${isDetector ? "bg-gradient-to-r from-gray-950/5 to-gray-900/5 border-dashed" : ""}`}>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                {isDetector && <span className="text-lg">📡</span>}
+                                <p className="font-bold text-primary">{product.name}</p>
+                                {isDetector && <span className="text-[10px] font-bold bg-secondary/10 text-secondary px-2 py-0.5 rounded-full uppercase">New</span>}
+                              </div>
+                              <p className="text-secondary font-semibold text-sm">R{product.price} {isDetector ? "per device" : "each"}</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button type="button" onClick={() => updateQuantity(product.id, -1)} className="w-9 h-9 rounded-full border-2 border-border hover:border-primary flex items-center justify-center transition-colors disabled:opacity-30" disabled={quantities[product.id] === 0}>
+                                <Minus size={14} />
+                              </button>
+                              <span className="w-8 text-center font-bold text-lg text-primary">{quantities[product.id] || 0}</span>
+                              <button type="button" onClick={() => updateQuantity(product.id, 1)} className="w-9 h-9 rounded-full bg-primary text-white hover:bg-secondary flex items-center justify-center transition-colors">
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                            {quantities[product.id] > 0 && (
+                              <div className="ml-4 text-right min-w-[70px]">
+                                <p className="font-bold text-primary">R{(product.price * quantities[product.id]).toFixed(0)}</p>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          {/* Inline detector simulator when added */}
+                          {isDetector && quantities[product.id] > 0 && (
+                            <div className="mt-2 px-2">
+                              <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block" style={{ boxShadow: "0 0 5px #4ade80" }} />
+                                Live Demo — this is how your detector will look:
+                              </p>
+                              <GasLevelDetector cylinderKg={9} />
+                            </div>
+                          )}
+                          {/* Usage hint per cylinder */}
+                          {!isDetector && quantities[product.id] > 0 && cylinderKg && (
+                            <div className="mt-1.5 ml-5 text-xs text-muted-foreground">
+                              💡 {quantities[product.id]}× {product.unit} = {quantities[product.id]} cylinder{quantities[product.id] > 1 ? "s" : ""}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </FadeIn>
