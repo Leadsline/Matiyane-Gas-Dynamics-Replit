@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useListProducts } from "@workspace/api-client-react";
 import { CheckCircle, Truck, ShoppingCart, ChevronRight, Flame } from "lucide-react";
+import { UsageEstimator } from "@/components/ui/usage-estimator";
 
 const useCases: Record<number, string[]> = {
   1: ["Small apartments", "Camping & braais", "Backup supply", "Single-person households"],
@@ -102,6 +103,9 @@ export default function ProductsPage() {
           )}
         </div>
       </section>
+
+      {/* Usage Estimator */}
+      <UsageEstimator />
 
       {/* Delivery Info */}
       <section className="py-16 bg-gray-50">
