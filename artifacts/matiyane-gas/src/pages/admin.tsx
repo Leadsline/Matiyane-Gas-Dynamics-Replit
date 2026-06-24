@@ -1,9 +1,20 @@
 import { useState } from "react";
-import { useAdminLogin, useAdminListOrders, useAdminUpdateOrderStatus, useAdminListContacts, useGetOrderSummary } from "@workspace/api-client-react";
-import { Flame, LogOut, ShoppingBag, MessageSquare, BarChart3, Search, ChevronDown, Loader2, Eye, CheckCircle, Truck, X, AlertCircle } from "lucide-react";
+import { useAdminLogin, useAdminListOrders, useAdminUpdateOrderStatus, useAdminListContacts, useGetOrderSummary, useAdminGetAnalytics } from "@workspace/api-client-react";
+import { Flame, LogOut, ShoppingBag, MessageSquare, BarChart3, Search, Loader2, Eye, AlertCircle, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 const ADMIN_TOKEN_KEY = "mgd_admin_token";
 
@@ -121,13 +132,17 @@ function OrdersTab({ token }: { token: string }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-  const updateStatus = useAdminUpdateOrderStatus();
-
-  const { data, isLoading, refetch } = useAdminListOrders({
-    query: {
-      queryKey: ["admin-orders", statusFilter, token],
-    },
+  const updateStatus = useAdminUpdateOrderStatus({
+    request: { headers: { Authorization: `Bearer ${token}` } },
   });
+
+  const { data, isLoading, refetch } = useAdminListOrders(
+    undefined,
+    {
+      query: { queryKey: ["admin-orders", statusFilter, token] },
+      request: { headers: { Authorization: `Bearer ${token}` } },
+    }
+  );
 
   const orders: OrderRow[] = (data?.orders as OrderRow[] | undefined) || [];
 
@@ -143,9 +158,10 @@ function OrdersTab({ token }: { token: string }) {
       await updateStatus.mutateAsync({
         id: orderId,
         data: { status: newStatus },
-        headers: { Authorization: `Bearer ${token}` },
       });
       await refetch();
+      queryClient.invalidateQueries({ queryKey: ["admin-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-analytics"] });
     } catch {
       // silently fail
     } finally {
@@ -258,9 +274,13 @@ function OrdersTab({ token }: { token: string }) {
 
 function ContactsTab({ token }: { token: string }) {
   const [search, setSearch] = useState("");
-  const { data, isLoading } = useAdminListContacts({
-    query: { queryKey: ["admin-contacts", token] },
-  });
+  const { data, isLoading } = useAdminListContacts(
+    undefined,
+    {
+      query: { queryKey: ["admin-contacts", token] },
+      request: { headers: { Authorization: `Bearer ${token}` } },
+    }
+  );
 
   interface ContactRow { id: number; name: string; email: string; phone?: string | null; message: string; createdAt: string; }
   const contacts: ContactRow[] = (data?.contacts as ContactRow[] | undefined) || [];
@@ -304,6 +324,158 @@ function ContactsTab({ token }: { token: string }) {
   );
 }
 
+type Period = "7d" | "30d" | "90d";
+
+const PERIOD_LABELS: Record<Period, string> = {
+  "7d": "7 Days",
+  "30d": "30 Days",
+  "90d": "90 Days",
+};
+
+const PRIMARY_COLOR = "#0f2d5a";
+const SECONDARY_COLOR = "#d97706";
+
+function AnalyticsTab({ token }: { token: string }) {
+  const [period, setPeriod] = useState<Period>("30d");
+
+  const { data, isLoading } = useAdminGetAnalytics(
+    { period },
+    {
+      query: { queryKey: ["admin-analytics", token, period] },
+      request: { headers: { Authorization: `Bearer ${token}` } },
+    }
+  );
+
+  const chartData = (data?.dailyData ?? []).map((d) => ({
+    date: new Date(d.date + "T00:00:00").toLocaleDateString("en-ZA", { month: "short", day: "numeric" }),
+    orders: d.orders,
+    revenue: Number(d.revenue),
+  }));
+
+  const totalOrders = chartData.reduce((s, d) => s + d.orders, 0);
+  const totalRevenue = chartData.reduce((s, d) => s + d.revenue, 0);
+  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h2 className="font-bold text-lg text-primary">Order Analytics</h2>
+        <div className="flex gap-1 bg-white rounded-lg p-1 border border-border w-fit">
+          {(["7d", "30d", "90d"] as Period[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-4 py-1.5 rounded text-xs font-semibold transition-all ${period === p ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {PERIOD_LABELS[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-xl p-4 border border-border shadow-sm">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Orders</p>
+          <p className="text-2xl font-extrabold text-primary">{isLoading ? "—" : totalOrders}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">in this period</p>
+        </div>
+        <div className="bg-white rounded-xl p-4 border border-border shadow-sm">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Revenue</p>
+          <p className="text-2xl font-extrabold text-secondary">{isLoading ? "—" : `R${totalRevenue.toFixed(0)}`}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">in this period</p>
+        </div>
+        <div className="bg-white rounded-xl p-4 border border-border shadow-sm">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Avg Order</p>
+          <p className="text-2xl font-extrabold text-primary">{isLoading ? "—" : `R${avgOrderValue.toFixed(0)}`}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">per order</p>
+        </div>
+      </div>
+
+      {/* Chart */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20 text-muted-foreground gap-2 bg-white rounded-xl border border-border">
+          <Loader2 className="animate-spin w-5 h-5" /> Loading chart...
+        </div>
+      ) : chartData.length === 0 ? (
+        <div className="text-center py-20 text-muted-foreground bg-white rounded-xl border border-border">
+          <TrendingUp className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <p className="font-medium">No orders yet in this period</p>
+          <p className="text-sm mt-1">Place your first order to see data here.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-border p-6">
+          <p className="text-xs text-muted-foreground mb-4 font-medium uppercase tracking-wide">
+            Orders &amp; Revenue — {PERIOD_LABELS[period]}
+          </p>
+          <ResponsiveContainer width="100%" height={320}>
+            <ComposedChart data={chartData} margin={{ top: 4, right: 32, left: 0, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11, fill: "#6b7280" }}
+                tickLine={false}
+                axisLine={false}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                yAxisId="left"
+                orientation="left"
+                tick={{ fontSize: 11, fill: "#6b7280" }}
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+                width={28}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tick={{ fontSize: 11, fill: "#6b7280" }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v: number) => `R${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`}
+                width={48}
+              />
+              <Tooltip
+                cursor={{ fill: "#f9fafb" }}
+                contentStyle={{ borderRadius: "10px", border: "1px solid #e5e7eb", fontSize: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+                formatter={(value: number, name: string) =>
+                  name === "revenue"
+                    ? [`R${value.toFixed(2)}`, "Revenue"]
+                    : [value, "Orders"]
+                }
+              />
+              <Legend
+                wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }}
+                formatter={(value: string) => value === "revenue" ? "Revenue (R)" : "Orders"}
+              />
+              <Bar
+                yAxisId="left"
+                dataKey="orders"
+                fill={PRIMARY_COLOR}
+                radius={[4, 4, 0, 0]}
+                name="orders"
+                maxBarSize={36}
+                opacity={0.9}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="revenue"
+                stroke={SECONDARY_COLOR}
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: SECONDARY_COLOR, strokeWidth: 0 }}
+                activeDot={{ r: 5 }}
+                name="revenue"
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatsGrid({ token }: { token: string }) {
   const { data } = useGetOrderSummary({ query: { queryKey: ["admin-summary", token] } });
   const stats = [
@@ -324,9 +496,11 @@ function StatsGrid({ token }: { token: string }) {
   );
 }
 
+type ActiveTab = "orders" | "contacts" | "analytics";
+
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(ADMIN_TOKEN_KEY));
-  const [activeTab, setActiveTab] = useState<"orders" | "contacts">("orders");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("orders");
 
   const handleLogout = () => {
     localStorage.removeItem(ADMIN_TOKEN_KEY);
@@ -339,7 +513,6 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Admin Navbar */}
       <div className="bg-primary text-white sticky top-0 z-50 shadow-lg">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -356,10 +529,8 @@ export default function AdminPage() {
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Stats */}
         <StatsGrid token={token} />
 
-        {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-white rounded-xl p-1 border border-border w-fit">
           <button
             onClick={() => setActiveTab("orders")}
@@ -373,10 +544,17 @@ export default function AdminPage() {
           >
             <MessageSquare size={15} /> Messages
           </button>
+          <button
+            onClick={() => setActiveTab("analytics")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${activeTab === "analytics" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <BarChart3 size={15} /> Analytics
+          </button>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === "orders" ? <OrdersTab token={token} /> : <ContactsTab token={token} />}
+        {activeTab === "orders" && <OrdersTab token={token} />}
+        {activeTab === "contacts" && <ContactsTab token={token} />}
+        {activeTab === "analytics" && <AnalyticsTab token={token} />}
       </div>
     </div>
   );

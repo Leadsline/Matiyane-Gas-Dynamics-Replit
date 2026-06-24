@@ -260,3 +260,26 @@ export const AdminListContactsResponse = zod.object({
   "page": zod.number(),
   "totalPages": zod.number()
 })
+
+
+/**
+ * @summary Get order volume and revenue analytics (admin)
+ */
+export const adminGetAnalyticsQueryPeriodDefault = `30d`;
+
+export const AdminGetAnalyticsQueryParams = zod.object({
+  "period": zod.enum(['7d', '30d', '90d']).default(adminGetAnalyticsQueryPeriodDefault)
+})
+
+export const AdminGetAnalyticsHeader = zod.object({
+  "Authorization": zod.string()
+})
+
+export const AdminGetAnalyticsResponse = zod.object({
+  "period": zod.string(),
+  "dailyData": zod.array(zod.object({
+  "date": zod.string(),
+  "orders": zod.number(),
+  "revenue": zod.number()
+}))
+})

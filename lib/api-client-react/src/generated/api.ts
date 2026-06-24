@@ -20,7 +20,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminAnalyticsResponse,
   AdminContactsResponse,
+  AdminGetAnalyticsParams,
   AdminListContactsParams,
   AdminListOrdersParams,
   AdminLoginInput,
@@ -1041,6 +1043,90 @@ export function useAdminListContacts<TData = Awaited<ReturnType<typeof adminList
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getAdminListContactsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAdminGetAnalyticsUrl = (params?: AdminGetAnalyticsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/analytics?${stringifiedParams}` : `/api/admin/analytics`
+}
+
+/**
+ * @summary Get order volume and revenue analytics (admin)
+ */
+export const adminGetAnalytics = async (params?: AdminGetAnalyticsParams, options?: RequestInit): Promise<AdminAnalyticsResponse> => {
+
+  return customFetch<AdminAnalyticsResponse>(getAdminGetAnalyticsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetAnalyticsQueryKey = (params?: AdminGetAnalyticsParams,) => {
+    return [
+    `/api/admin/analytics`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminGetAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetAnalytics>>, TError = ErrorType<ErrorResponse>>(params?: AdminGetAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetAnalyticsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetAnalytics>>> = ({ signal }) => adminGetAnalytics(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetAnalytics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetAnalytics>>>
+export type AdminGetAnalyticsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get order volume and revenue analytics (admin)
+ */
+
+export function useAdminGetAnalytics<TData = Awaited<ReturnType<typeof adminGetAnalytics>>, TError = ErrorType<ErrorResponse>>(
+ params?: AdminGetAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetAnalyticsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -15446,6 +15446,21 @@ var AdminListContactsResponse = zod.object({
   "page": zod.number(),
   "totalPages": zod.number()
 });
+var adminGetAnalyticsQueryPeriodDefault = `30d`;
+var AdminGetAnalyticsQueryParams = zod.object({
+  "period": zod.enum(["7d", "30d", "90d"]).default(adminGetAnalyticsQueryPeriodDefault)
+});
+var AdminGetAnalyticsHeader = zod.object({
+  "Authorization": zod.string()
+});
+var AdminGetAnalyticsResponse = zod.object({
+  "period": zod.string(),
+  "dailyData": zod.array(zod.object({
+    "date": zod.string(),
+    "orders": zod.number(),
+    "revenue": zod.number()
+  }))
+});
 
 // src/routes/health.ts
 var health = new Hono2();
@@ -16347,6 +16362,18 @@ function createAdminRouter(db2) {
       logger2.error({ err }, "Failed to update order status");
       return c.json({ error: "Internal server error" }, 500);
     }
+  });
+  router.get("/admin/analytics", requireAdmin, async (c) => {
+    const period = c.req.query("period") || "30d";
+    const days = period === "7d" ? 7 : period === "90d" ? 90 : 30;
+    const startDate = /* @__PURE__ */ new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const rows = await db2.select({
+      date: sql`DATE(${ordersTable.createdAt})::text`,
+      orders: count(),
+      revenue: sql`COALESCE(SUM(${ordersTable.totalAmount}), 0)::float`
+    }).from(ordersTable).where(gte(ordersTable.createdAt, startDate)).groupBy(sql`DATE(${ordersTable.createdAt})`).orderBy(sql`DATE(${ordersTable.createdAt})`);
+    return c.json({ period, dailyData: rows });
   });
   router.get("/admin/contacts", requireAdmin, async (c) => {
     const page = Math.max(1, parseInt(c.req.query("page") || "1"));

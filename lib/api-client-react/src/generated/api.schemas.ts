@@ -143,6 +143,17 @@ export interface AdminContactsResponse {
   totalPages: number;
 }
 
+export type AdminAnalyticsResponseDailyDataItem = {
+  date: string;
+  orders: number;
+  revenue: number;
+};
+
+export interface AdminAnalyticsResponse {
+  period: string;
+  dailyData: AdminAnalyticsResponseDailyDataItem[];
+}
+
 export type OrderStatusUpdateStatus = typeof OrderStatusUpdateStatus[keyof typeof OrderStatusUpdateStatus];
 
 
@@ -184,4 +195,17 @@ export type AdminListContactsParams = {
 page?: number;
 limit?: number;
 };
+
+export type AdminGetAnalyticsParams = {
+period?: AdminGetAnalyticsPeriod;
+};
+
+export type AdminGetAnalyticsPeriod = typeof AdminGetAnalyticsPeriod[keyof typeof AdminGetAnalyticsPeriod];
+
+
+export const AdminGetAnalyticsPeriod = {
+  '7d': '7d',
+  '30d': '30d',
+  '90d': '90d',
+} as const;
 

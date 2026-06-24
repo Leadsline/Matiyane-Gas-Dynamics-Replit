@@ -332,6 +332,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /admin/analytics:
+    get:
+      operationId: adminGetAnalytics
+      tags: [admin]
+      summary: Get order volume and revenue analytics (admin)
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d]
+            default: 30d
+      responses:
+        "200":
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAnalyticsResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -663,6 +694,30 @@ components:
         - email
         - message
         - createdAt
+
+    AdminAnalyticsResponse:
+      type: object
+      properties:
+        period:
+          type: string
+        dailyData:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              orders:
+                type: integer
+              revenue:
+                type: number
+            required:
+              - date
+              - orders
+              - revenue
+      required:
+        - period
+        - dailyData
 
     OrderStatusUpdate:
       type: object

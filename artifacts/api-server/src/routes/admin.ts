@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { ordersTable, orderItemsTable, contactMessagesTable } from "@workspace/db/schema";
-import { eq, desc, count, sql } from "drizzle-orm";
+import { eq, desc, count, sql, gte } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireAdmin, generateAdminToken } from "../lib/auth";
 import { logger } from "../lib/logger";
@@ -144,6 +144,26 @@ export function createAdminRouter(db: AnyDb) {
       logger.error({ err }, "Failed to update order status");
       return c.json({ error: "Internal server error" }, 500);
     }
+  });
+
+  router.get("/admin/analytics", requireAdmin, async (c) => {
+    const period = c.req.query("period") || "30d";
+    const days = period === "7d" ? 7 : period === "90d" ? 90 : 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const rows = await db
+      .select({
+        date: sql<string>`DATE(${ordersTable.createdAt})::text`,
+        orders: count(),
+        revenue: sql<number>`COALESCE(SUM(${ordersTable.totalAmount}), 0)::float`,
+      })
+      .from(ordersTable)
+      .where(gte(ordersTable.createdAt, startDate))
+      .groupBy(sql`DATE(${ordersTable.createdAt})`)
+      .orderBy(sql`DATE(${ordersTable.createdAt})`);
+
+    return c.json({ period, dailyData: rows });
   });
 
   router.get("/admin/contacts", requireAdmin, async (c) => {
