@@ -1,16 +1,19 @@
-import { Router, type IRouter } from "express";
-import healthRouter from "./health";
-import productsRouter from "./products";
-import ordersRouter from "./orders";
-import contactRouter from "./contact";
-import adminRouter from "./admin";
+import { Hono } from "hono";
+import health from "./health";
+import products from "./products";
+import { createOrdersRouter } from "./orders";
+import { createContactRouter } from "./contact";
+import { createAdminRouter } from "./admin";
+import type { AnyDb } from "../app";
 
-const router: IRouter = Router();
+export function createRouter(db: AnyDb) {
+  const router = new Hono();
 
-router.use(healthRouter);
-router.use(productsRouter);
-router.use(ordersRouter);
-router.use(contactRouter);
-router.use(adminRouter);
+  router.route("/", health);
+  router.route("/", products);
+  router.route("/", createOrdersRouter(db));
+  router.route("/", createContactRouter(db));
+  router.route("/", createAdminRouter(db));
 
-export default router;
+  return router;
+}

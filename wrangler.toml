@@ -1,0 +1,6 @@
+name = "matiyane-gas"
+compatibility_date = "2024-09-02"
+pages_build_output_dir = "artifacts/matiyane-gas/dist/public"
+
+[vars]
+NODE_ENV = "production"

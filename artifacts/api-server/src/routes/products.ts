@@ -1,6 +1,6 @@
-import { Router } from "express";
+import { Hono } from "hono";
 
-const router = Router();
+const products = new Hono();
 
 export const PRODUCTS = [
   { id: 1, name: "5kg Gas Refill", description: "Perfect for small households and camping. Safe, clean-burning LPG gas.", price: 150, unit: "5kg", inStock: true },
@@ -10,8 +10,8 @@ export const PRODUCTS = [
   { id: 5, name: "Gas Level Detector", description: "Clip-on ultrasonic sensor that reads your cylinder level in seconds. Works on all standard LPG cylinders. No installation required.", price: 299, unit: "device", inStock: true },
 ];
 
-router.get("/products", (req, res) => {
-  res.json(PRODUCTS);
+products.get("/products", (c) => {
+  return c.json(PRODUCTS);
 });
 
-export default router;
+export default products;

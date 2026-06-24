@@ -1,32 +1,46 @@
-import { Router } from "express";
-import { db, contactMessagesTable } from "@workspace/db";
+import { Hono } from "hono";
+import { contactMessagesTable } from "@workspace/db/schema";
 import { SubmitContactBody } from "@workspace/api-zod";
 import { sendContactEmail } from "../lib/email";
 import { syncContactToHubspot } from "../lib/hubspot";
 import { logger } from "../lib/logger";
+import type { AnyDb } from "../app";
 
-const router = Router();
+export function createContactRouter(db: AnyDb) {
+  const router = new Hono();
 
-router.post("/contact", async (req, res) => {
-  const parsed = SubmitContactBody.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "Invalid request body" });
-  }
+  router.post("/contact", async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
 
-  const { name, email, phone, message } = parsed.data;
+    const parsed = SubmitContactBody.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "Invalid request body" }, 400);
+    }
 
-  try {
-    await db.insert(contactMessagesTable).values({ name, email, phone: phone ?? null, message });
+    const { name, email, phone, message } = parsed.data;
 
-    sendContactEmail(name, email, phone ?? undefined, message).catch((err) => logger.error({ err }, "Contact email send failed"));
+    try {
+      await db.insert(contactMessagesTable).values({ name, email, phone: phone ?? null, message });
 
-    syncContactToHubspot({ name, email, phone: phone ?? undefined, message }).catch((err) => logger.error({ err }, "HubSpot contact sync failed"));
+      sendContactEmail(name, email, phone ?? undefined, message).catch((err) =>
+        logger.error({ err }, "Contact email send failed"),
+      );
 
-    res.json({ message: "Message received. We will get back to you shortly." });
-  } catch (err) {
-    req.log.error({ err }, "Failed to save contact message");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
+      syncContactToHubspot({ name, email, phone: phone ?? undefined, message }).catch((err) =>
+        logger.error({ err }, "HubSpot contact sync failed"),
+      );
 
-export default router;
+      return c.json({ message: "Message received. We will get back to you shortly." });
+    } catch (err) {
+      logger.error({ err }, "Failed to save contact message");
+      return c.json({ error: "Internal server error" }, 500);
+    }
+  });
+
+  return router;
+}

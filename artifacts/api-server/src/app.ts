@@ -1,34 +1,19 @@
-import express, { type Express } from "express";
-import cors from "cors";
-import pinoHttp from "pino-http";
-import router from "./routes";
-import { logger } from "./lib/logger";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { logger as honoLogger } from "hono/logger";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type * as schema from "@workspace/db/schema";
+import { createRouter } from "./routes";
 
-const app: Express = express();
+export type AnyDb = NodePgDatabase<typeof schema>;
 
-app.use(
-  pinoHttp({
-    logger,
-    serializers: {
-      req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0],
-        };
-      },
-      res(res) {
-        return {
-          statusCode: res.statusCode,
-        };
-      },
-    },
-  }),
-);
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+export function createApp(db: AnyDb) {
+  const app = new Hono();
 
-app.use("/api", router);
+  app.use("*", cors());
+  app.use("*", honoLogger());
 
-export default app;
+  app.route("/api", createRouter(db));
+
+  return app;
+}
