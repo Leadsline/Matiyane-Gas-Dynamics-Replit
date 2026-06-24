@@ -4,6 +4,7 @@ import { eq, desc, count, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireAdmin, generateAdminToken } from "../lib/auth";
 import { logger } from "../lib/logger";
+import { sendOrderStatusWhatsApp, isWhatsAppConfigured } from "../lib/whatsapp";
 import type { AnyDb } from "../app";
 
 const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] || "matiyane2024admin";
@@ -128,6 +129,15 @@ export function createAdminRouter(db: AnyDb) {
         .returning();
 
       if (!updated) return c.json({ error: "Order not found" }, 404);
+
+      if (isWhatsAppConfigured()) {
+        sendOrderStatusWhatsApp({
+          customerName: updated.fullName,
+          customerPhone: updated.phone,
+          orderRef: updated.orderRef,
+          newStatus: parsed.data.status,
+        }).catch((err) => logger.error({ err, orderId: id }, "WhatsApp notification failed"));
+      }
 
       return c.json({ message: "Order status updated" });
     } catch (err) {

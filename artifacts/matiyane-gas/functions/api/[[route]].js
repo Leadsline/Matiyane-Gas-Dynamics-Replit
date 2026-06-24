@@ -15781,6 +15781,77 @@ var requireAdmin = createMiddleware(async (c, next) => {
   return next();
 });
 
+// src/lib/whatsapp.ts
+var API_TOKEN = define_process_env_default["WHATSAPP_API_TOKEN"];
+var PHONE_NUMBER_ID = define_process_env_default["WHATSAPP_PHONE_NUMBER_ID"];
+var TEMPLATE_NAME = define_process_env_default["WHATSAPP_TEMPLATE_NAME"] || "order_status_update";
+var LANG_CODE = define_process_env_default["WHATSAPP_LANG_CODE"] || "en";
+var BASE_URL2 = "https://graph.facebook.com/v19.0";
+function isWhatsAppConfigured() {
+  return !!(API_TOKEN && PHONE_NUMBER_ID);
+}
+function formatPhoneZA(raw2) {
+  const digits = raw2.replace(/\D/g, "");
+  if (digits.startsWith("27")) return digits;
+  if (digits.startsWith("0")) return `27${digits.slice(1)}`;
+  return digits;
+}
+var STATUS_LABELS = {
+  confirmed: "Order Confirmed \u2705",
+  out_for_delivery: "Out for Delivery \u{1F69A}",
+  delivered: "Delivered \u{1F389}",
+  paid: "Completed & Paid \u{1F49B}",
+  cancelled: "Cancelled \u274C"
+};
+var STATUS_DETAILS = {
+  confirmed: "Your order is confirmed and being prepared for dispatch.",
+  out_for_delivery: "Our driver is on the way \u2014 please be available to receive your delivery.",
+  delivered: "Your gas has arrived. Thank you for choosing Matiyane Gas!",
+  paid: "Your order is fully complete. Thank you for your business!",
+  cancelled: "Your order has been cancelled. Call us on 076 748 8597 if you need help."
+};
+async function sendOrderStatusWhatsApp(opts) {
+  if (!isWhatsAppConfigured()) return;
+  const statusLabel = STATUS_LABELS[opts.newStatus];
+  if (!statusLabel) return;
+  const to2 = formatPhoneZA(opts.customerPhone);
+  const firstName = opts.customerName.trim().split(" ")[0] || opts.customerName;
+  const detail = STATUS_DETAILS[opts.newStatus] ?? "";
+  const body = {
+    messaging_product: "whatsapp",
+    to: to2,
+    type: "template",
+    template: {
+      name: TEMPLATE_NAME,
+      language: { code: LANG_CODE },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: firstName },
+            { type: "text", text: opts.orderRef },
+            { type: "text", text: statusLabel },
+            { type: "text", text: detail }
+          ]
+        }
+      ]
+    }
+  };
+  const res = await fetch(`${BASE_URL2}/${PHONE_NUMBER_ID}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${API_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const text2 = await res.text();
+    throw new Error(`WhatsApp API error ${res.status}: ${text2}`);
+  }
+  logger2.info({ to: to2, orderRef: opts.orderRef, status: opts.newStatus }, "WhatsApp notification sent");
+}
+
 // src/routes/admin.ts
 var ADMIN_PASSWORD = define_process_env_default["ADMIN_PASSWORD"] || "matiyane2024admin";
 function createAdminRouter(db) {
@@ -15872,6 +15943,14 @@ function createAdminRouter(db) {
     try {
       const [updated] = await db.update(ordersTable).set({ status: parsed.data.status, updatedAt: /* @__PURE__ */ new Date() }).where(eq(ordersTable.id, id)).returning();
       if (!updated) return c.json({ error: "Order not found" }, 404);
+      if (isWhatsAppConfigured()) {
+        sendOrderStatusWhatsApp({
+          customerName: updated.fullName,
+          customerPhone: updated.phone,
+          orderRef: updated.orderRef,
+          newStatus: parsed.data.status
+        }).catch((err) => logger2.error({ err, orderId: id }, "WhatsApp notification failed"));
+      }
       return c.json({ message: "Order status updated" });
     } catch (err) {
       logger2.error({ err }, "Failed to update order status");
