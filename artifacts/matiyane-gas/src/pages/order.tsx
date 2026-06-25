@@ -390,11 +390,28 @@ export default function OrderPage() {
                   </div>
                 </div>
               </FadeIn>
+
+              {/* Mobile bottom Place Order button */}
+              <FadeIn direction="up" delay={100}>
+                <div className="lg:hidden mt-6 bg-white rounded-2xl p-6 border border-border shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-muted-foreground">Total</span>
+                    <span className="text-xl font-extrabold text-primary">R{totalAmount.toFixed(0)}</span>
+                  </div>
+                  <Button type="submit" size="lg" className="w-full bg-secondary text-white hover:bg-secondary/90 font-bold rounded-full py-4 text-base" disabled={createOrder.isPending || orderItems.length === 0}>
+                    {createOrder.isPending ? <><Loader2 className="animate-spin mr-2 w-5 h-5" />Placing Order...</> : <>Place Order — R{totalAmount.toFixed(0)}</>}
+                  </Button>
+                  <div className="mt-4 flex items-start gap-2 text-xs text-muted-foreground bg-gray-50 rounded-xl p-3">
+                    <CheckCircle size={13} className="text-green-500 mt-0.5 shrink-0" />
+                    <span>After placing, choose PayFast or Paystack to pay securely.</span>
+                  </div>
+                </div>
+              </FadeIn>
             </div>
 
             <div className="lg:col-span-1">
               <FadeIn direction="left" delay={200}>
-                <div className="bg-white rounded-2xl p-8 border border-border shadow-sm sticky top-24">
+                <div className="bg-white rounded-2xl p-8 border border-border shadow-sm sticky top-24 hidden lg:block">
                   <h2 className="text-xl font-extrabold text-primary mb-6">Order Summary</h2>
                   {orderItems.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
