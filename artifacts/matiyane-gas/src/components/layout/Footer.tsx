@@ -32,6 +32,7 @@ export function Footer() {
             <ul className="space-y-2 text-gray-400">
               <li>5kg Gas Refill</li>
               <li>9kg Gas Refill</li>
+              <li>14kg Gas Refill</li>
               <li>19kg Gas Refill</li>
               <li>48kg Gas Refill</li>
             </ul>
@@ -59,6 +60,7 @@ export function Footer() {
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between text-sm text-gray-500">
           <p>&copy; {new Date().getFullYear()} Matiyane Gas Distributors. All rights reserved.</p>
           <div className="mt-4 md:mt-0 space-x-4">
+            <Link href="/admin" className="hover:text-white transition-colors">Admin</Link>
             <span className="cursor-pointer hover:text-white">Privacy Policy</span>
             <span className="cursor-pointer hover:text-white">Terms of Service</span>
           </div>

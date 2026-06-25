@@ -254,6 +254,7 @@ export const AdminListContactsResponse = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "phone": zod.string().nullish(),
+  "service": zod.string().nullish(),
   "message": zod.string(),
   "createdAt": zod.string()
 })),

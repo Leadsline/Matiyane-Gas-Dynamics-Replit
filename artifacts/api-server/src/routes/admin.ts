@@ -187,6 +187,7 @@ export function createAdminRouter(db: AnyDb) {
           name: c.name,
           email: c.email,
           phone: c.phone ?? null,
+          service: c.service ?? null,
           message: c.message,
           createdAt: c.createdAt.toISOString(),
         })),

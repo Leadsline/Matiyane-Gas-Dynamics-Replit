@@ -282,17 +282,17 @@ function ContactsTab({ token }: { token: string }) {
     }
   );
 
-  interface ContactRow { id: number; name: string; email: string; phone?: string | null; message: string; createdAt: string; }
+  interface ContactRow { id: number; name: string; email: string; phone?: string | null; service?: string | null; message: string; createdAt: string; }
   const contacts: ContactRow[] = (data?.contacts as ContactRow[] | undefined) || [];
   const filtered = contacts.filter((c) =>
-    !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())
+    !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase()) || (c.service?.toLowerCase() || "").includes(search.toLowerCase())
   );
 
   return (
     <div>
       <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <Input className="pl-9" placeholder="Search contacts..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Input className="pl-9" placeholder="Search contacts by name, email, or service..." value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
       {isLoading ? (
@@ -315,6 +315,11 @@ function ContactsTab({ token }: { token: string }) {
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0">{new Date(c.createdAt).toLocaleDateString("en-ZA")}</span>
               </div>
+              {c.service && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border bg-secondary/10 text-secondary border-secondary/20 mb-2">
+                  {c.service}
+                </span>
+              )}
               <p className="text-sm text-foreground/80 leading-relaxed bg-gray-50 rounded-lg p-3">{c.message}</p>
             </div>
           ))}

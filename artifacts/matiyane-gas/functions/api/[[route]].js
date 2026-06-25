@@ -12651,6 +12651,7 @@ var contactMessagesTable = pgTable("contact_messages", {
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
+  service: text("service"),
   message: text("message").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
@@ -14983,6 +14984,7 @@ var SubmitContactBody = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "phone": zod.string().nullish(),
+  "service": zod.string().nullish(),
   "message": zod.string()
 });
 var SubmitContactResponse = zod.object({
@@ -15048,6 +15050,7 @@ var AdminListContactsResponse = zod.object({
     "name": zod.string(),
     "email": zod.string(),
     "phone": zod.string().nullish(),
+    "service": zod.string().nullish(),
     "message": zod.string(),
     "createdAt": zod.string()
   })),
@@ -15246,7 +15249,7 @@ function buildAdminEmailHtml(data) {
 </body>
 </html>`;
 }
-function buildContactAdminEmailHtml(name, email, phone, message) {
+function buildContactAdminEmailHtml(name, email, phone, service, message) {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"></head>
@@ -15260,6 +15263,7 @@ function buildContactAdminEmailHtml(name, email, phone, message) {
       <p style="margin:4px 0;"><strong>Name:</strong> ${name}</p>
       <p style="margin:4px 0;"><strong>Email:</strong> ${email}</p>
       ${phone ? `<p style="margin:4px 0;"><strong>Phone:</strong> ${phone}</p>` : ""}
+      ${service ? `<p style="margin:4px 0;"><strong>Service:</strong> ${service}</p>` : ""}
       <div style="margin-top:16px;padding:16px;background:#f9fafb;border-radius:6px;border-left:4px solid #f0c040;">
         <p style="margin:0 0 8px;font-weight:bold;color:#1a2f5e;">Message:</p>
         <p style="margin:0;color:#374151;white-space:pre-wrap;">${message}</p>
@@ -15347,7 +15351,7 @@ async function sendOrderEmails(data) {
     logger2.error({ err, orderRef: data.orderRef }, "Failed to send order emails");
   }
 }
-async function sendContactEmail(name, email, phone, message) {
+async function sendContactEmail(name, email, phone, service, message) {
   const ADMIN_EMAIL = define_process_env_default.ADMIN_EMAIL || "admin@matiyanegas.co.za";
   const hasBrevo = !!define_process_env_default.BREVO_API_KEY;
   const hasSmtp = !!(define_process_env_default.SMTP_HOST && define_process_env_default.SMTP_USER && define_process_env_default.SMTP_PASS);
@@ -15358,11 +15362,11 @@ async function sendContactEmail(name, email, phone, message) {
   try {
     await sendEmail(
       ADMIN_EMAIL,
-      `New Contact Message from ${name}`,
-      buildContactAdminEmailHtml(name, email, phone, message),
+      `New Contact Message from ${name}${service ? ` (${service})` : ""}`,
+      buildContactAdminEmailHtml(name, email, phone, service, message),
       "Matiyane Gas Website"
     );
-    logger2.info({ email }, "Contact email sent");
+    logger2.info({ email, service }, "Contact email sent");
   } catch (err) {
     logger2.error({ err }, "Failed to send contact email");
   }
@@ -15468,7 +15472,8 @@ async function syncContactToHubspot(contact) {
     if (contactId) {
       await hubspotFetch("/crm/v3/objects/notes", "POST", {
         properties: {
-          hs_note_body: `Contact form message:
+          hs_note_body: `Contact form message:${contact.service ? `
+Service: ${contact.service}` : ""}
 
 ${contact.message}`,
           hs_timestamp: Date.now()
@@ -15738,13 +15743,13 @@ function createContactRouter(db) {
     if (!parsed.success) {
       return c.json({ error: "Invalid request body" }, 400);
     }
-    const { name, email, phone, message } = parsed.data;
+    const { name, email, phone, service, message } = parsed.data;
     try {
-      await db.insert(contactMessagesTable).values({ name, email, phone: phone ?? null, message });
-      sendContactEmail(name, email, phone ?? void 0, message).catch(
+      await db.insert(contactMessagesTable).values({ name, email, phone: phone ?? null, service: service ?? null, message });
+      sendContactEmail(name, email, phone ?? void 0, service ?? void 0, message).catch(
         (err) => logger2.error({ err }, "Contact email send failed")
       );
-      syncContactToHubspot({ name, email, phone: phone ?? void 0, message }).catch(
+      syncContactToHubspot({ name, email, phone: phone ?? void 0, service: service ?? void 0, message }).catch(
         (err) => logger2.error({ err }, "HubSpot contact sync failed")
       );
       return c.json({ message: "Message received. We will get back to you shortly." });
@@ -15808,7 +15813,8 @@ var API_TOKEN = define_process_env_default["WHATSAPP_API_TOKEN"];
 var PHONE_NUMBER_ID = define_process_env_default["WHATSAPP_PHONE_NUMBER_ID"];
 var TEMPLATE_NAME = define_process_env_default["WHATSAPP_TEMPLATE_NAME"] || "order_status_update";
 var LANG_CODE = define_process_env_default["WHATSAPP_LANG_CODE"] || "en";
-var BASE_URL2 = "https://graph.facebook.com/v19.0";
+var API_VERSION = define_process_env_default["WHATSAPP_API_VERSION"] || "v22.0";
+var BASE_URL2 = `https://graph.facebook.com/${API_VERSION}`;
 function isWhatsAppConfigured() {
   return !!(API_TOKEN && PHONE_NUMBER_ID);
 }
@@ -16004,6 +16010,7 @@ function createAdminRouter(db) {
           name: c2.name,
           email: c2.email,
           phone: c2.phone ?? null,
+          service: c2.service ?? null,
           message: c2.message,
           createdAt: c2.createdAt.toISOString()
         })),

@@ -686,6 +686,8 @@ components:
           type: string
         phone:
           type: ["string", "null"]
+        service:
+          type: ["string", "null"]
         message:
           type: string
         createdAt:
