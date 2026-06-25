@@ -28,6 +28,12 @@ const accentBarClasses = [
   "accent-bar-purple", "accent-bar-rose", "accent-bar-cyan",
 ];
 
+const borderHoverClasses = [
+  "border-hover-blue", "border-hover-amber", "border-hover-green",
+  "border-hover-purple", "border-hover-rose", "border-hover-cyan",
+  "border-hover-indigo", "border-hover-orange", "border-hover-teal", "border-hover-lime"
+];
+
 export default function ProductsPage() {
   const { data: products, isLoading } = useListProducts();
 
@@ -152,7 +158,7 @@ export default function ProductsPage() {
               const Icon = (product as any).icon ? iconMap2[(product as any).icon] || fallbackIcon : fallbackIcon;
               return (
                 <FadeIn key={product.id} direction="up" delay={i * 100}>
-                  <div className="h-full flex flex-col bg-white rounded-2xl p-6 border border-border hover:border-secondary hover:shadow-xl hover:shadow-secondary/10 transition-all duration-300 card-hover-lift group relative overflow-hidden">
+                  <div className={`h-full flex flex-col bg-white rounded-2xl p-6 border border-border hover:shadow-xl hover:shadow-secondary/10 transition-all duration-300 card-hover-lift group relative overflow-hidden ${borderHoverClasses[i + 5]}`}>
                     <div className={`absolute top-0 left-0 right-0 h-1 ${accentBarClasses[i + 5]} scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left`} />
                     <div className="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-secondary/10 transition-colors duration-300">
                       <Icon className="w-7 h-7 text-primary group-hover:text-secondary transition-colors duration-300" />

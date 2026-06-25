@@ -240,3 +240,25 @@
 .accent-bar-orange { background-color: #ea580c; }
 .accent-bar-teal { background-color: #0d9488; }
 .accent-bar-lime { background-color: #65a30d; }
+
+/* ── Matching border hover colors ── */
+.border-hover-blue { transition: border-color 0.3s ease; }
+.border-hover-blue:hover { border-color: #2563eb; }
+.border-hover-amber { transition: border-color 0.3s ease; }
+.border-hover-amber:hover { border-color: #d97706; }
+.border-hover-green { transition: border-color 0.3s ease; }
+.border-hover-green:hover { border-color: #16a34a; }
+.border-hover-purple { transition: border-color 0.3s ease; }
+.border-hover-purple:hover { border-color: #9333ea; }
+.border-hover-rose { transition: border-color 0.3s ease; }
+.border-hover-rose:hover { border-color: #e11d48; }
+.border-hover-cyan { transition: border-color 0.3s ease; }
+.border-hover-cyan:hover { border-color: #0891b2; }
+.border-hover-indigo { transition: border-color 0.3s ease; }
+.border-hover-indigo:hover { border-color: #4f46e5; }
+.border-hover-orange { transition: border-color 0.3s ease; }
+.border-hover-orange:hover { border-color: #ea580c; }
+.border-hover-teal { transition: border-color 0.3s ease; }
+.border-hover-teal:hover { border-color: #0d9488; }
+.border-hover-lime { transition: border-color 0.3s ease; }
+.border-hover-lime:hover { border-color: #65a30d; }

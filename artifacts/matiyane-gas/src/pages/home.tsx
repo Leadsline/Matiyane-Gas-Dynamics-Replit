@@ -64,6 +64,12 @@ const accentBarClasses = [
   "accent-bar-indigo", "accent-bar-orange", "accent-bar-teal", "accent-bar-lime"
 ];
 
+const borderHoverClasses = [
+  "border-hover-blue", "border-hover-amber", "border-hover-green",
+  "border-hover-purple", "border-hover-rose", "border-hover-cyan",
+  "border-hover-indigo", "border-hover-orange", "border-hover-teal", "border-hover-lime"
+];
+
 const marqueeLogos = [
   "Licensed & Certified Gas Distributor", "Free Delivery in Kempton Park", "Available 7 Days a Week",
   "Your Safety is Our Priority", "Trusted by Thousands of Households", "Competitive Prices, No Compromise",
@@ -189,7 +195,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {gasRefills.map((product, i) => (
               <FadeIn key={product.id} direction="up" delay={i * 100}>
-                <div className="group h-full flex flex-col border border-border rounded-2xl p-6 text-center hover:border-secondary hover:shadow-xl hover:shadow-secondary/10 transition-all duration-300 bg-card relative overflow-hidden card-hover-lift">
+                <div className={`group h-full flex flex-col border border-border rounded-2xl p-6 text-center hover:shadow-xl hover:shadow-secondary/10 transition-all duration-300 bg-card relative overflow-hidden card-hover-lift ${borderHoverClasses[i]}`}>
                   {/* Colored accent bar on hover */}
                   <div className={`absolute top-0 left-0 right-0 h-1 ${accentBarClasses[i]} scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left`} />
                   <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary/10 transition-colors duration-300">
@@ -235,7 +241,7 @@ export default function HomePage() {
               const Icon = getIcon(product);
               return (
                 <FadeIn key={product.id} direction="up" delay={i * 100}>
-                  <div className="group h-full flex flex-col bg-white rounded-2xl p-6 border border-border hover:border-secondary hover:shadow-xl hover:shadow-secondary/10 transition-all duration-300 card-hover-lift relative overflow-hidden">
+                  <div className={`group h-full flex flex-col bg-white rounded-2xl p-6 border border-border hover:shadow-xl hover:shadow-secondary/10 transition-all duration-300 card-hover-lift relative overflow-hidden ${borderHoverClasses[i + 5]}`}>
                     <div className={`absolute top-0 left-0 right-0 h-1 ${accentBarClasses[i + 5]} scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left`} />
                     <div className="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-secondary/10 transition-colors duration-300">
                       <Icon className="w-7 h-7 text-primary group-hover:text-secondary transition-colors duration-300" />
