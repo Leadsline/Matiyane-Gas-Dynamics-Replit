@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAdminLogin, useAdminListOrders, useAdminUpdateOrderStatus, useAdminListContacts, useGetOrderSummary, useAdminGetAnalytics } from "@workspace/api-client-react";
-import { Flame, LogOut, ShoppingBag, MessageSquare, BarChart3, Search, Loader2, Eye, AlertCircle, TrendingUp } from "lucide-react";
+import { Flame, LogOut, ShoppingBag, MessageSquare, BarChart3, Search, Loader2, Eye, AlertCircle, TrendingUp, LayoutDashboard, Calendar, Download, ChevronLeft, ChevronRight, Package, Users, Receipt, CheckCircle2, Clock, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  Area,
+  AreaChart,
 } from "recharts";
 
 const ADMIN_TOKEN_KEY = "mgd_admin_token";
@@ -68,35 +70,42 @@ function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-primary flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl p-10 w-full max-w-sm shadow-2xl">
+    <div className="min-h-screen bg-primary flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Decorative background shapes */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-72 h-72 bg-secondary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
+      </div>
+      <div className="bg-white rounded-2xl p-10 w-full max-w-sm shadow-2xl relative z-10">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Flame className="w-8 h-8 text-secondary" />
-            <span className="font-bold text-2xl text-primary">Matiyane Gas</span>
+            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
+              <Flame className="w-7 h-7 text-secondary" />
+            </div>
           </div>
-          <h1 className="text-xl font-bold text-primary">Admin Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-1">Enter your admin password to continue</p>
+          <h1 className="text-xl font-bold text-primary">Matiyane Gas</h1>
+          <p className="text-muted-foreground text-sm mt-1 font-medium">Admin Dashboard</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             type="password"
-            placeholder="Admin password"
+            placeholder="Enter admin password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoFocus
-            className={error ? "border-destructive" : ""}
+            className={`h-12 ${error ? "border-destructive" : ""}`}
           />
           {error && (
-            <div className="flex items-center gap-2 text-destructive text-sm">
+            <div className="flex items-center gap-2 text-destructive text-sm bg-red-50 rounded-lg px-3 py-2">
               <AlertCircle size={14} />
               {error}
             </div>
           )}
-          <Button type="submit" className="w-full bg-primary text-white hover:bg-secondary font-bold" disabled={loginMutation.isPending}>
+          <Button type="submit" className="w-full h-12 bg-primary text-white hover:bg-secondary font-bold text-base rounded-lg" disabled={loginMutation.isPending}>
             {loginMutation.isPending ? <><Loader2 className="animate-spin mr-2 w-4 h-4" /> Signing in...</> : "Sign In"}
           </Button>
         </form>
+        <p className="text-center text-xs text-muted-foreground mt-6">Secure access. Unauthorized attempts are logged.</p>
       </div>
     </div>
   );
@@ -482,30 +491,152 @@ function AnalyticsTab({ token }: { token: string }) {
 }
 
 function StatsGrid({ token }: { token: string }) {
-  const { data } = useGetOrderSummary({ query: { queryKey: ["admin-summary", token] } });
+  const { data, isLoading } = useGetOrderSummary({ query: { queryKey: ["admin-summary", token] } });
   const stats = [
-    { label: "Total Orders", value: data?.totalOrders ?? "—", color: "text-primary" },
-    { label: "Pending", value: data?.pendingOrders ?? "—", color: "text-yellow-600" },
-    { label: "Completed", value: data?.completedOrders ?? "—", color: "text-green-600" },
-    { label: "Revenue (Paid)", value: data ? `R${data.totalRevenue.toFixed(0)}` : "—", color: "text-secondary" },
+    { label: "Total Orders", value: data?.totalOrders ?? 0, icon: Package, color: "bg-blue-50 text-blue-600", border: "border-blue-100" },
+    { label: "Pending", value: data?.pendingOrders ?? 0, icon: Clock, color: "bg-yellow-50 text-yellow-600", border: "border-yellow-100" },
+    { label: "Completed", value: data?.completedOrders ?? 0, icon: CheckCircle2, color: "bg-green-50 text-green-600", border: "border-green-100" },
+    { label: "Revenue (Paid)", value: data ? `R${data.totalRevenue.toFixed(0)}` : "R0", icon: Receipt, color: "bg-amber-50 text-amber-600", border: "border-amber-100" },
   ];
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      {stats.map((s) => (
-        <div key={s.label} className="bg-white rounded-xl p-5 border border-border shadow-sm">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">{s.label}</p>
-          <p className={`text-3xl font-extrabold ${s.color}`}>{s.value}</p>
-        </div>
-      ))}
+      {stats.map((s) => {
+        const Icon = s.icon;
+        return (
+          <div key={s.label} className={`bg-white rounded-xl p-5 border ${s.border} shadow-sm hover:shadow-md transition-shadow`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className={`w-10 h-10 rounded-lg ${s.color} flex items-center justify-center`}>
+                <Icon className="w-5 h-5" />
+              </div>
+            </div>
+            <p className="text-2xl font-extrabold text-foreground">{isLoading ? "—" : s.value}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mt-1">{s.label}</p>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-type ActiveTab = "orders" | "contacts" | "analytics";
+function RecentActivity({ orders, contacts }: { orders: OrderRow[]; contacts: { id: number; name: string; email: string; createdAt: string }[] }) {
+  const recentOrders = orders.slice(0, 3);
+  const recentContacts = contacts.slice(0, 3);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* Recent Orders */}
+      <div className="bg-white rounded-xl border border-border p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-primary flex items-center gap-2">
+            <ShoppingBag size={18} className="text-secondary" />
+            Recent Orders
+          </h3>
+          <span className="text-xs text-muted-foreground">Last 3</span>
+        </div>
+        {recentOrders.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">No orders yet</p>
+        ) : (
+          <div className="space-y-3">
+            {recentOrders.map((o) => (
+              <div key={o.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div>
+                  <p className="font-semibold text-sm text-primary">{o.orderRef}</p>
+                  <p className="text-xs text-muted-foreground">{o.fullName} · {o.suburb}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-sm text-secondary">R{o.totalAmount.toFixed(2)}</p>
+                  <StatusBadge status={o.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Recent Messages */}
+      <div className="bg-white rounded-xl border border-border p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-primary flex items-center gap-2">
+            <MessageSquare size={18} className="text-secondary" />
+            Recent Messages
+          </h3>
+          <span className="text-xs text-muted-foreground">Last 3</span>
+        </div>
+        {recentContacts.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">No messages yet</p>
+        ) : (
+          <div className="space-y-3">
+            {recentContacts.map((c) => (
+              <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div>
+                  <p className="font-semibold text-sm text-primary">{c.name}</p>
+                  <p className="text-xs text-muted-foreground">{c.email}</p>
+                </div>
+                <span className="text-xs text-muted-foreground">{new Date(c.createdAt).toLocaleDateString("en-ZA")}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QuickActions() {
+  return (
+    <div className="bg-white rounded-xl border border-border p-6 mb-8">
+      <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
+        <ArrowUpRight size={18} className="text-secondary" />
+        Quick Actions
+      </h3>
+      <div className="flex flex-wrap gap-3">
+        <a href="/order" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-secondary transition-colors">
+          <Package size={16} /> New Order
+        </a>
+        <a href="/contact" className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
+          <MessageSquare size={16} /> Contact Page
+        </a>
+        <a href="/products" className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
+          <ShoppingBag size={16} /> Products
+        </a>
+      </div>
+    </div>
+  );
+}
+
+type ActiveTab = "dashboard" | "orders" | "contacts" | "analytics";
+
+function DashboardTab({ token }: { token: string }) {
+  const { data: ordersData } = useAdminListOrders(
+    undefined,
+    {
+      query: { queryKey: ["admin-orders", "all", token] },
+      request: { headers: { Authorization: `Bearer ${token}` } },
+    }
+  );
+  const { data: contactsData } = useAdminListContacts(
+    undefined,
+    {
+      query: { queryKey: ["admin-contacts", token] },
+      request: { headers: { Authorization: `Bearer ${token}` } },
+    }
+  );
+
+  const orders: OrderRow[] = (ordersData?.orders as OrderRow[] | undefined) || [];
+  const contacts = (contactsData?.contacts as any[] | undefined) || [];
+
+  return (
+    <div>
+      <StatsGrid token={token} />
+      <QuickActions />
+      <RecentActivity orders={orders} contacts={contacts} />
+    </div>
+  );
+}
 
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(ADMIN_TOKEN_KEY));
-  const [activeTab, setActiveTab] = useState<ActiveTab>("orders");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
 
   const handleLogout = () => {
     localStorage.removeItem(ADMIN_TOKEN_KEY);
@@ -521,12 +652,14 @@ export default function AdminPage() {
       <div className="bg-primary text-white sticky top-0 z-50 shadow-lg">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Flame className="w-6 h-6 text-secondary" />
+            <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
+              <Flame className="w-5 h-5 text-secondary" />
+            </div>
             <span className="font-bold text-lg">Matiyane Gas</span>
             <span className="text-white/40 mx-2">|</span>
             <span className="text-white/70 text-sm">Admin Dashboard</span>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm">
+          <button onClick={handleLogout} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm px-3 py-1.5 rounded-lg hover:bg-white/10">
             <LogOut size={15} />
             Sign Out
           </button>
@@ -534,9 +667,13 @@ export default function AdminPage() {
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <StatsGrid token={token} />
-
-        <div className="flex gap-1 mb-6 bg-white rounded-xl p-1 border border-border w-fit">
+        <div className="flex flex-wrap gap-1 mb-6 bg-white rounded-xl p-1 border border-border w-fit">
+          <button
+            onClick={() => setActiveTab("dashboard")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${activeTab === "dashboard" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <LayoutDashboard size={15} /> Dashboard
+          </button>
           <button
             onClick={() => setActiveTab("orders")}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${activeTab === "orders" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
@@ -557,6 +694,7 @@ export default function AdminPage() {
           </button>
         </div>
 
+        {activeTab === "dashboard" && <DashboardTab token={token} />}
         {activeTab === "orders" && <OrdersTab token={token} />}
         {activeTab === "contacts" && <ContactsTab token={token} />}
         {activeTab === "analytics" && <AnalyticsTab token={token} />}
