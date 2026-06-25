@@ -3,14 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "preinstall": "echo 'use pnpm'",
     "build": "pnpm -w run typecheck:libs && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/matiyane-gas run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter ./artifacts/** --filter ./scripts --if-present run typecheck"
-  },
-  "private": true,
-  "packageManager": "pnpm@9.15.4",
-  "devDependencies": {
-    "prettier": "^3.8.3",
-    "typescript": "~5.9.3"
-  }
-}
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter
