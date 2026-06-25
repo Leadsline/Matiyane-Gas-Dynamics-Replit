@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "pnpm run typecheck:libs && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/matiyane-gas run build",
   "outputDirectory": "artifacts/matiyane-gas/dist/public",
   "functions": {
     "api/index.mjs": {
@@ -11,8 +10,5 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index.mjs" },
     { "source": "/((?!.*\\..*).*)", "destination": "/index.html" }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
