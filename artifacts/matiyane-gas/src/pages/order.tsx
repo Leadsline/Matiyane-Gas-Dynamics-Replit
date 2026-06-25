@@ -156,14 +156,15 @@ export default function OrderPage() {
   const displayProducts = products || [
     { id: 1, name: "5kg Gas Refill",     price: 150,  unit: "5kg"    },
     { id: 2, name: "9kg Gas Refill",     price: 250,  unit: "9kg"    },
-    { id: 3, name: "19kg Gas Refill",    price: 490,  unit: "19kg"   },
-    { id: 4, name: "48kg Gas Refill",    price: 1250, unit: "48kg"   },
-    { id: 5, name: "Gas Level Detector", price: 299,  unit: "device" },
+    { id: 3, name: "14kg Gas Refill",    price: 490,  unit: "14kg"   },
+    { id: 4, name: "19kg Gas Refill",    price: 740,  unit: "19kg"   },
+    { id: 5, name: "48kg Gas Refill",    price: 1590, unit: "48kg"   },
+    { id: 6, name: "Gas Level Detector", price: 299,  unit: "device" },
   ];
 
-  const GAS_CYLINDER_KG: Record<number, number> = { 1: 5, 2: 9, 3: 19, 4: 48 };
+  const GAS_CYLINDER_KG: Record<number, number> = { 1: 5, 2: 9, 3: 14, 4: 19, 5: 48 };
 
-  const [quantities, setQuantities] = useState<Record<number, number>>({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+  const [quantities, setQuantities] = useState<Record<number, number>>({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 });
   const [form, setForm] = useState({ fullName: "", phone: "", email: "", deliveryAddress: "", suburb: "", specialInstructions: "" });
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -171,7 +172,7 @@ export default function OrderPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const productId = parseInt(params.get("product") || "0");
-    if (productId >= 1 && productId <= 5) {
+    if (productId >= 1 && productId <= 6) {
       setQuantities((prev) => ({ ...prev, [productId]: 1 }));
     }
   }, []);
@@ -216,8 +217,10 @@ export default function OrderPage() {
       });
       setPlacedOrder(order as unknown as PlacedOrder);
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch {
-      toast({ title: "Order failed", description: "Something went wrong. Please try again or call us directly.", variant: "destructive" });
+    } catch (err: any) {
+      const msg = err?.message || err?.error || "Something went wrong. Please try again or call us directly.";
+      console.error("Order error:", err);
+      toast({ title: "Order failed", description: msg, variant: "destructive" });
     }
   };
 
@@ -295,11 +298,11 @@ export default function OrderPage() {
                   )}
                   <div className="space-y-4">
                     {displayProducts.map((product) => {
-                      const isDetector = product.id === 5;
+                      const isDetector = product.id === 6;
                       const cylinderKg = GAS_CYLINDER_KG[product.id];
                       return (
                         <div key={product.id}>
-                          <div className={`flex items-center justify-between p-5 rounded-xl border transition-all ${quantities[product.id] > 0 ? "border-secondary bg-secondary/5" : "border-border hover:border-primary/30"} ${isDetector ? "bg-gradient-to-r from-gray-950/5 to-gray-900/5 border-dashed" : ""}`}>
+                          <div className={`flex items-center justify-between p-5 rounded-xl border transition-all hover:shadow-sm ${quantities[product.id] > 0 ? "border-secondary bg-secondary/5" : "border-border hover:border-primary/30"} ${isDetector ? "bg-gradient-to-r from-gray-950/5 to-gray-900/5 border-dashed" : ""}`}>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 {isDetector && <span className="text-lg">📡</span>}
@@ -309,11 +312,11 @@ export default function OrderPage() {
                               <p className="text-secondary font-semibold text-sm">R{product.price} {isDetector ? "per device" : "each"}</p>
                             </div>
                             <div className="flex items-center gap-3">
-                              <button type="button" onClick={() => updateQuantity(product.id, -1)} className="w-9 h-9 rounded-full border-2 border-border hover:border-primary flex items-center justify-center transition-colors disabled:opacity-30" disabled={quantities[product.id] === 0}>
+                              <button type="button" onClick={() => updateQuantity(product.id, -1)} className="w-9 h-9 rounded-full border-2 border-border hover:border-primary flex items-center justify-center transition-colors disabled:opacity-30 hover:scale-110 active:scale-95" disabled={quantities[product.id] === 0}>
                                 <Minus size={14} />
                               </button>
                               <span className="w-8 text-center font-bold text-lg text-primary">{quantities[product.id] || 0}</span>
-                              <button type="button" onClick={() => updateQuantity(product.id, 1)} className="w-9 h-9 rounded-full bg-primary text-white hover:bg-secondary flex items-center justify-center transition-colors">
+                              <button type="button" onClick={() => updateQuantity(product.id, 1)} className="w-9 h-9 rounded-full bg-primary text-white hover:bg-secondary flex items-center justify-center transition-colors hover:scale-110 active:scale-95">
                                 <Plus size={14} />
                               </button>
                             </div>

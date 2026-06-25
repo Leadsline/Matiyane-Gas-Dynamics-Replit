@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { contactMessagesTable } from "@workspace/db/schema";
 import { SubmitContactBody } from "@workspace/api-zod";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { sendContactEmail } from "../lib/email";
 import { syncContactToHubspot } from "../lib/hubspot";
 import { logger } from "../lib/logger";
@@ -22,16 +23,16 @@ export function createContactRouter(db: AnyDb) {
       return c.json({ error: "Invalid request body" }, 400);
     }
 
-    const { name, email, phone, message } = parsed.data;
+    const { name, email, phone, service, message } = parsed.data;
 
     try {
-      await db.insert(contactMessagesTable).values({ name, email, phone: phone ?? null, message });
+      await db.insert(contactMessagesTable).values({ name, email, phone: phone ?? null, service: service ?? null, message });
 
-      sendContactEmail(name, email, phone ?? undefined, message).catch((err) =>
+      sendContactEmail(name, email, phone ?? undefined, service ?? undefined, message).catch((err) =>
         logger.error({ err }, "Contact email send failed"),
       );
 
-      syncContactToHubspot({ name, email, phone: phone ?? undefined, message }).catch((err) =>
+      syncContactToHubspot({ name, email, phone: phone ?? undefined, service: service ?? undefined, message }).catch((err) =>
         logger.error({ err }, "HubSpot contact sync failed"),
       );
 

@@ -108,6 +108,8 @@ export interface ContactInput {
   email: string;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  service?: string | null;
   message: string;
 }
 

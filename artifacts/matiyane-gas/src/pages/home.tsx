@@ -83,13 +83,27 @@ export default function HomePage() {
   ]).filter((p) => p.id <= 5);
 
   const serviceProducts = (products || [
-    { id: 7, name: "Gas Stoves Installation", description: "Professional installation of gas stoves for safe and efficient cooking.", icon: Wrench },
-    { id: 8, name: "Gas Fire Place Installation", description: "Expert installation of gas fireplaces to bring warmth, style and comfort.", icon: Flame },
-    { id: 9, name: "Gas Stoves Distribution (Sales)", description: "Wide range of quality gas stoves available for purchase.", icon: ShoppingCart },
-    { id: 10, name: "Gas Heaters Distribution", description: "Stay warm all year round with efficient and reliable gas heaters.", icon: Heater },
-    { id: 11, name: "Gas Cylinders", description: "High quality gas cylinders in different sizes to meet your needs.", icon: Cylinder },
-    { id: 12, name: "Certificates of Compliance (COCs)", description: "We issue COCs to ensure your gas systems meet safety standards.", icon: ClipboardCheck },
+    { id: 7, name: "Gas Stoves Installation", description: "Professional installation of gas stoves for safe and efficient cooking.", icon: "wrench" },
+    { id: 8, name: "Gas Fire Place Installation", description: "Expert installation of gas fireplaces to bring warmth, style and comfort.", icon: "flame" },
+    { id: 9, name: "Gas Stoves Distribution (Sales)", description: "Wide range of quality gas stoves available for purchase.", icon: "shoppingCart" },
+    { id: 10, name: "Gas Heaters Distribution", description: "Stay warm all year round with efficient and reliable gas heaters.", icon: "heater" },
+    { id: 11, name: "Gas Cylinders", description: "High quality gas cylinders in different sizes to meet your needs.", icon: "cylinder" },
+    { id: 12, name: "Certificates of Compliance (COCs)", description: "We issue COCs to ensure your gas systems meet safety standards.", icon: "clipboardCheck" },
   ]).filter((p) => p.id >= 7);
+
+  const iconMap: Record<string, typeof Wrench> = {
+    wrench: Wrench, flame: Flame, shoppingCart: ShoppingCart, heater: Heater, cylinder: Cylinder, clipboardCheck: ClipboardCheck,
+  };
+  const getIcon = (product: { name: string; icon?: string }) => {
+    const fallback = (product.name.includes("Stove") && product.name.includes("Install")) ? Wrench
+      : product.name.includes("Fire") ? Flame
+      : product.name.includes("Sales") ? ShoppingCart
+      : product.name.includes("Heater") ? Heater
+      : product.name.includes("Cylinders") ? Cylinder
+      : product.name.includes("COC") ? ClipboardCheck
+      : Wrench;
+    return (product.icon && iconMap[product.icon]) || fallback;
+  };
 
   return (
     <main>
@@ -218,7 +232,7 @@ export default function HomePage() {
           </FadeIn>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {serviceProducts.map((product, i) => {
-              const Icon = product.icon || Wrench;
+              const Icon = getIcon(product);
               return (
                 <FadeIn key={product.id} direction="up" delay={i * 100}>
                   <div className="group h-full flex flex-col bg-white rounded-2xl p-6 border border-border hover:border-secondary hover:shadow-xl hover:shadow-secondary/10 transition-all duration-300 card-hover-lift relative overflow-hidden">

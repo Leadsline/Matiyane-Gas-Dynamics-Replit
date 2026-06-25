@@ -12,8 +12,9 @@ const PROFILE_POINTS = [
 const CYLINDERS = [
   { id: 1, size: "5kg",  kg: 5,  color: "#3b82f6" },
   { id: 2, size: "9kg",  kg: 9,  color: "#f59e0b" },
-  { id: 3, size: "19kg", kg: 19, color: "#22c55e" },
-  { id: 4, size: "48kg", kg: 48, color: "#a855f7" },
+  { id: 3, size: "14kg", kg: 14, color: "#22c55e" },
+  { id: 4, size: "19kg", kg: 19, color: "#a855f7" },
+  { id: 5, size: "48kg", kg: 48, color: "#e11d48" },
 ];
 
 function interpolate(pos: number): number {

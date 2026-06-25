@@ -127,6 +127,7 @@ export async function syncContactToHubspot(contact: {
   name: string;
   email: string;
   phone?: string;
+  service?: string;
   message: string;
 }): Promise<void> {
   if (!HUBSPOT_API_KEY) return;
@@ -141,7 +142,7 @@ export async function syncContactToHubspot(contact: {
     if (contactId) {
       await hubspotFetch("/crm/v3/objects/notes", "POST", {
         properties: {
-          hs_note_body: `Contact form message:\n\n${contact.message}`,
+          hs_note_body: `Contact form message:${contact.service ? `\nService: ${contact.service}` : ""}\n\n${contact.message}`,
           hs_timestamp: Date.now(),
         },
         associations: [

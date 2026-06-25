@@ -141,7 +141,7 @@ function buildAdminEmailHtml(data: OrderEmailData): string {
 </html>`;
 }
 
-function buildContactAdminEmailHtml(name: string, email: string, phone: string | undefined, message: string): string {
+function buildContactAdminEmailHtml(name: string, email: string, phone: string | undefined, service: string | undefined, message: string): string {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"></head>
@@ -155,6 +155,7 @@ function buildContactAdminEmailHtml(name: string, email: string, phone: string |
       <p style="margin:4px 0;"><strong>Name:</strong> ${name}</p>
       <p style="margin:4px 0;"><strong>Email:</strong> ${email}</p>
       ${phone ? `<p style="margin:4px 0;"><strong>Phone:</strong> ${phone}</p>` : ""}
+      ${service ? `<p style="margin:4px 0;"><strong>Service:</strong> ${service}</p>` : ""}
       <div style="margin-top:16px;padding:16px;background:#f9fafb;border-radius:6px;border-left:4px solid #f0c040;">
         <p style="margin:0 0 8px;font-weight:bold;color:#1a2f5e;">Message:</p>
         <p style="margin:0;color:#374151;white-space:pre-wrap;">${message}</p>
@@ -255,7 +256,7 @@ export async function sendOrderEmails(data: OrderEmailData): Promise<void> {
   }
 }
 
-export async function sendContactEmail(name: string, email: string, phone: string | undefined, message: string): Promise<void> {
+export async function sendContactEmail(name: string, email: string, phone: string | undefined, service: string | undefined, message: string): Promise<void> {
   const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@matiyanegas.co.za";
   const hasBrevo = !!process.env.BREVO_API_KEY;
   const hasSmtp = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
@@ -268,11 +269,11 @@ export async function sendContactEmail(name: string, email: string, phone: strin
   try {
     await sendEmail(
       ADMIN_EMAIL,
-      `New Contact Message from ${name}`,
-      buildContactAdminEmailHtml(name, email, phone, message),
+      `New Contact Message from ${name}${service ? ` (${service})` : ""}`,
+      buildContactAdminEmailHtml(name, email, phone, service, message),
       "Matiyane Gas Website"
     );
-    logger.info({ email }, "Contact email sent");
+    logger.info({ email, service }, "Contact email sent");
   } catch (err) {
     logger.error({ err }, "Failed to send contact email");
   }

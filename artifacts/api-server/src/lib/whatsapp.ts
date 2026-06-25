@@ -4,7 +4,8 @@ const API_TOKEN = process.env["WHATSAPP_API_TOKEN"];
 const PHONE_NUMBER_ID = process.env["WHATSAPP_PHONE_NUMBER_ID"];
 const TEMPLATE_NAME = process.env["WHATSAPP_TEMPLATE_NAME"] || "order_status_update";
 const LANG_CODE = process.env["WHATSAPP_LANG_CODE"] || "en";
-const BASE_URL = "https://graph.facebook.com/v19.0";
+const API_VERSION = process.env["WHATSAPP_API_VERSION"] || "v22.0";
+const BASE_URL = `https://graph.facebook.com/${API_VERSION}`;
 
 export function isWhatsAppConfigured(): boolean {
   return !!(API_TOKEN && PHONE_NUMBER_ID);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FadeIn } from "@/components/ui/fade-in";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,33 @@ const contactDetails = [
 export default function ContactPage() {
   const { toast } = useToast();
   const submitContact = useSubmitContact();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", service: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const serviceOptions = [
+    "General Enquiry",
+    "5kg Gas Refill",
+    "9kg Gas Refill",
+    "14kg Gas Refill",
+    "19kg Gas Refill",
+    "48kg Gas Refill",
+    "Gas Level Detector",
+    "Gas Stoves Installation",
+    "Gas Fire Place Installation",
+    "Gas Stoves Distribution (Sales)",
+    "Gas Heaters Distribution",
+    "Gas Cylinders",
+    "Certificates of Compliance (COCs)",
+  ];
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefillService = params.get("service");
+    if (prefillService) {
+      setForm((f) => ({ ...f, service: prefillService }));
+    }
+  }, []);
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -35,10 +59,12 @@ export default function ContactPage() {
     e.preventDefault();
     if (!validate()) return;
     try {
-      await submitContact.mutateAsync({ data: { name: form.name, email: form.email, phone: form.phone || null, message: form.message } });
+      await submitContact.mutateAsync({ data: { name: form.name, email: form.email, phone: form.phone || null, service: form.service || null, message: form.message } });
       setSubmitted(true);
-    } catch {
-      toast({ title: "Failed to send", description: "Please try again or call us directly.", variant: "destructive" });
+    } catch (err: any) {
+      const msg = err?.message || err?.error || "Please try again or call us directly.";
+      console.error("Contact error:", err);
+      toast({ title: "Failed to send", description: msg, variant: "destructive" });
     }
   };
 
@@ -137,7 +163,7 @@ export default function ContactPage() {
                     <Button
                       className="mt-6 rounded-full"
                       variant="outline"
-                      onClick={() => { setSubmitted(false); setForm({ name: "", email: "", phone: "", message: "" }); }}
+                      onClick={() => { setSubmitted(false); setForm({ name: "", email: "", phone: "", service: "", message: "" }); }}
                     >
                       Send Another Message
                     </Button>
@@ -178,6 +204,20 @@ export default function ContactPage() {
                         className={`bg-white ${errors.email ? "border-destructive" : ""}`}
                       />
                       {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="service" className="font-semibold text-sm mb-1.5 block">Service (optional)</Label>
+                      <select
+                        id="service"
+                        value={form.service}
+                        onChange={(e) => setForm((f) => ({ ...f, service: e.target.value }))}
+                        className="w-full bg-white border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      >
+                        <option value="">Select a service...</option>
+                        {serviceOptions.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <Label htmlFor="message" className="font-semibold text-sm mb-1.5 block">Your Message *</Label>

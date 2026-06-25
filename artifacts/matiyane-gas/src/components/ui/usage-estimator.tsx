@@ -16,8 +16,9 @@ const PROFILE_POINTS = [
 const CYLINDERS = [
   { id: 1, size: "5kg",  kg: 5,  price: 150,  colors: ["#3b82f6", "#60a5fa"], bg: "from-blue-50 to-blue-100 border-blue-200" },
   { id: 2, size: "9kg",  kg: 9,  price: 250,  colors: ["#f59e0b", "#fbbf24"], bg: "from-amber-50 to-amber-100 border-amber-200" },
-  { id: 3, size: "19kg", kg: 19, price: 490,  colors: ["#22c55e", "#4ade80"], bg: "from-green-50 to-green-100 border-green-200" },
-  { id: 4, size: "48kg", kg: 48, price: 1250, colors: ["#a855f7", "#c084fc"], bg: "from-purple-50 to-purple-100 border-purple-200" },
+  { id: 3, size: "14kg", kg: 14, price: 490,  colors: ["#22c55e", "#4ade80"], bg: "from-green-50 to-green-100 border-green-200" },
+  { id: 4, size: "19kg", kg: 19, price: 740,  colors: ["#a855f7", "#c084fc"], bg: "from-purple-50 to-purple-100 border-purple-200" },
+  { id: 5, size: "48kg", kg: 48, price: 1590, colors: ["#e11d48", "#fb7185"], bg: "from-rose-50 to-rose-100 border-rose-200" },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
