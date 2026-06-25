@@ -200,12 +200,27 @@ export default function OrderPage() {
     if (!form.suburb.trim()) errs.suburb = "Suburb is required";
     if (orderItems.length === 0) errs.items = "Please add at least one product";
     setErrors(errs);
-    return Object.keys(errs).length === 0;
+    return errs;
+  };
+
+  const scrollToFirstError = (errs: Record<string, string>) => {
+    const fieldOrder = ["items", "fullName", "phone", "email", "deliveryAddress", "suburb"];
+    const firstErrorKey = fieldOrder.find((k) => errs[k]);
+    if (!firstErrorKey) return;
+    const el = document.getElementById(firstErrorKey === "items" ? "products-section" : firstErrorKey);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.focus();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      scrollToFirstError(errs);
+      return;
+    }
     try {
       const order = await createOrder.mutateAsync({
         data: {
@@ -286,7 +301,7 @@ export default function OrderPage() {
               </FadeIn>
 
               <FadeIn direction="up">
-                <div className="bg-white rounded-2xl p-8 border border-border shadow-sm">
+                <div id="products-section" className="bg-white rounded-2xl p-8 border border-border shadow-sm">
                   <h2 className="text-2xl font-extrabold text-primary mb-2 flex items-center gap-3">
                     <ShoppingCart className="w-6 h-6 text-secondary" /> Select Products
                   </h2>
