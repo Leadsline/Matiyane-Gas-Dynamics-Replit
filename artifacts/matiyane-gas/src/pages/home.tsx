@@ -125,7 +125,7 @@ export default function HomePage() {
           alt="LPG Gas Cylinder"
           className="absolute z-[1] pointer-events-none hidden md:block"
           style={{
-            right: "-5%",
+            right: "8%",
             bottom: "0",
             height: "100%",
             maxHeight: "none",
@@ -139,7 +139,7 @@ export default function HomePage() {
           alt="LPG Gas Cylinder"
           className="absolute z-[1] pointer-events-none md:hidden"
           style={{
-            right: "-15%",
+            right: "-5%",
             bottom: "-5%",
             height: "45%",
             objectFit: "contain",

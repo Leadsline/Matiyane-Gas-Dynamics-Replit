@@ -85,15 +85,22 @@ export function HeroCanvas() {
       };
     };
 
-    const createEnergyRing = (): EnergyRing => {
+    // Cylinder center position (matches the img element at right: 8% on desktop, right: -5% on mobile)
+    const getCylinderCenter = () => {
       const { w, h } = getCanvasSize();
-      // Rings spawn around the cylinder area (right side of image)
-      const cx = w * 0.65 + (Math.random() - 0.5) * 300;
-      const cy = h * 0.45 + (Math.random() - 0.5) * 200;
-      const maxR = 80 + Math.random() * 250;
+      const isMobile = w < 768;
       return {
-        x: cx,
-        y: cy,
+        cx: isMobile ? w * 0.78 : w * 0.58,
+        cy: isMobile ? h * 0.82 : h * 0.48,
+      };
+    };
+
+    const createEnergyRing = (): EnergyRing => {
+      const { cx, cy } = getCylinderCenter();
+      const maxR = 50 + Math.random() * 180;
+      return {
+        x: cx + (Math.random() - 0.5) * 200,
+        y: cy + (Math.random() - 0.5) * 150,
         radius: 0,
         maxRadius: maxR,
         speed: 0.5 + Math.random() * 1.5,
@@ -103,19 +110,17 @@ export function HeroCanvas() {
     };
 
     const createLightSpark = (): LightSpark => {
-      const { w, h } = getCanvasSize();
-      // Sparks near the cylinder area
-      const cx = w * 0.65;
-      const cy = h * 0.45;
+      const { cx, cy } = getCylinderCenter();
+      // Spawn sparks around the cylinder, then drift outward
       const angle = Math.random() * Math.PI * 2;
-      const dist = 80 + Math.random() * 350;
+      const dist = 60 + Math.random() * 200;
       const x = cx + Math.cos(angle) * dist;
       const y = cy + Math.sin(angle) * dist;
       const hue = Math.random() > 0.5 ? 120 + Math.random() * 30 : 160 + Math.random() * 40;
       return {
         x, y,
-        vx: Math.cos(angle) * (0.2 + Math.random() * 0.5),
-        vy: Math.sin(angle) * (0.2 + Math.random() * 0.5),
+        vx: Math.cos(angle) * (0.3 + Math.random() * 0.8),
+        vy: Math.sin(angle) * (0.3 + Math.random() * 0.8),
         size: Math.random() * 3 + 1,
         alpha: Math.random() * 0.7 + 0.3,
         life: 0,
@@ -171,9 +176,8 @@ export function HeroCanvas() {
       ctx.clearRect(0, 0, w, h);
       time += 0.016;
 
-      // Draw ambient energy glows around cylinder area
-      const cx = w * 0.65;
-      const cy = h * 0.45;
+      // Draw ambient energy glows around cylinder
+      const { cx, cy } = getCylinderCenter();
       drawGlow(cx, cy, 200 + Math.sin(time * 0.5) * 30, "160, 80%, 50%", 0.08);
       drawGlow(cx + 40, cy + 20, 150 + Math.sin(time * 0.7 + 1) * 20, "120, 80%, 55%", 0.06);
 
@@ -271,7 +275,7 @@ export function HeroCanvas() {
         ctx.stroke();
       }
 
-      // Draw sweeping light streaks
+      // Draw sweeping light streaks orbiting the cylinder
       const streakCount = 3;
       for (let i = 0; i < streakCount; i++) {
         const t = (time * 0.3 + i * (Math.PI * 2 / streakCount)) % (Math.PI * 2);
