@@ -6,3 +6,9 @@ id = "co3lC0GL9R1pOVePx1WdN"
 uri = "file://matiyane-gas-wordpress-theme.zip"
 type = "unspecified"
 title = "Matiyane Gas — WordPress Theme + Track Order (ZIP)"
+
+[[outputs]]
+id = "0bL9NjKoYrOgn7b27X4kl"
+uri = "file://ARCHITECTURE.md"
+type = "text"
+title = "Architecture Documentation"
