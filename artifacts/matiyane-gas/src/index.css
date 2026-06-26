@@ -217,6 +217,10 @@
 .animate-cylinder-glow {
   animation: cylinder-glow 3s ease-in-out infinite;
 }
+/* Combined class: both float and glow together (cannot apply two separate animation classes on same element because animation is a shorthand) */
+.animate-cylinder-float-glow {
+  animation: cylinder-float 5s ease-in-out infinite, cylinder-glow 3s ease-in-out infinite;
+}
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }

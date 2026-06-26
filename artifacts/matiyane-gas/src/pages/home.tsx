@@ -123,7 +123,7 @@ export default function HomePage() {
         <img
           src="/hero-cylinder.png"
           alt="LPG Gas Cylinder"
-          className="absolute z-[1] pointer-events-none hidden md:block animate-cylinder-float animate-cylinder-glow"
+          className="absolute z-[1] pointer-events-none hidden md:block animate-cylinder-float-glow"
           style={{
             right: "8%",
             bottom: "-5%",
