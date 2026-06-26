@@ -85,13 +85,13 @@ export function HeroCanvas() {
       };
     };
 
-    // Cylinder center position (matches the img element at right: 8% on desktop, right: -5% on mobile)
+    // Cylinder center position (matches the img element at right: 8%, bottom: -5%, height: 95% on desktop)
     const getCylinderCenter = () => {
       const { w, h } = getCanvasSize();
       const isMobile = w < 768;
       return {
         cx: isMobile ? w * 0.78 : w * 0.58,
-        cy: isMobile ? h * 0.82 : h * 0.48,
+        cy: isMobile ? h * 0.82 : h * 0.52,
       };
     };
 

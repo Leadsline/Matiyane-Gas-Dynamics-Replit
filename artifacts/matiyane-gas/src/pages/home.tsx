@@ -119,31 +119,30 @@ export default function HomePage() {
         <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#0a1628] via-[#0f2240] to-[#1a2f5e]" />
         {/* Animated energy overlay — particles, light, rings */}
         <HeroCanvas />
-        {/* Static LPG cylinder — right side, isolated with transparent background */}
+        {/* Animated LPG cylinder — right side, isolated with gentle float + glow */}
         <img
           src="/hero-cylinder.png"
           alt="LPG Gas Cylinder"
-          className="absolute z-[1] pointer-events-none hidden md:block"
+          className="absolute z-[1] pointer-events-none hidden md:block animate-cylinder-float animate-cylinder-glow"
           style={{
             right: "8%",
-            bottom: "0",
-            height: "100%",
+            bottom: "-5%",
+            height: "95%",
             maxHeight: "none",
             objectFit: "contain",
-            opacity: 0.95,
           }}
         />
-        {/* Mobile cylinder — bottom right corner, doesn't overlap text */}
+        {/* Mobile cylinder — bottom right, smaller, gentle float */}
         <img
           src="/hero-cylinder.png"
           alt="LPG Gas Cylinder"
-          className="absolute z-[1] pointer-events-none md:hidden"
+          className="absolute z-[1] pointer-events-none md:hidden animate-cylinder-float"
           style={{
-            right: "-5%",
-            bottom: "-5%",
-            height: "45%",
+            right: "-20%",
+            bottom: "-8%",
+            height: "40%",
             objectFit: "contain",
-            opacity: 0.75,
+            opacity: 0.65,
           }}
         />
         <div className="relative z-10 text-white px-4 max-w-4xl mx-auto w-full text-center md:text-left md:ml-8 lg:ml-16">
