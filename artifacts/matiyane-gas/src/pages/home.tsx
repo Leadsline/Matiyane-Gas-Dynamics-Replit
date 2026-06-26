@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { ParticleCanvas } from "@/components/ui/particle-canvas";
+import { HeroCanvas } from "@/components/ui/hero-canvas";
 import { FadeIn } from "@/components/ui/fade-in";
 import { Button } from "@/components/ui/button";
 import { useListProducts } from "@workspace/api-client-react";
@@ -115,25 +115,55 @@ export default function HomePage() {
     <main>
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <ParticleCanvas />
-        <div className="relative z-10 text-center text-white px-4 max-w-4xl mx-auto">
+        {/* Dark background base */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#0a1628] via-[#0f2240] to-[#1a2f5e]" />
+        {/* Animated energy overlay — particles, light, rings */}
+        <HeroCanvas />
+        {/* Static LPG cylinder — right side, isolated with transparent background */}
+        <img
+          src="/hero-cylinder.png"
+          alt="LPG Gas Cylinder"
+          className="absolute z-[1] pointer-events-none hidden md:block"
+          style={{
+            right: "-5%",
+            bottom: "0",
+            height: "100%",
+            maxHeight: "none",
+            objectFit: "contain",
+            opacity: 0.95,
+          }}
+        />
+        {/* Mobile cylinder — bottom right corner, doesn't overlap text */}
+        <img
+          src="/hero-cylinder.png"
+          alt="LPG Gas Cylinder"
+          className="absolute z-[1] pointer-events-none md:hidden"
+          style={{
+            right: "-15%",
+            bottom: "-5%",
+            height: "45%",
+            objectFit: "contain",
+            opacity: 0.75,
+          }}
+        />
+        <div className="relative z-10 text-white px-4 max-w-4xl mx-auto w-full text-center md:text-left md:ml-8 lg:ml-16">
           <FadeIn direction="down">
-            <div className="inline-flex items-center gap-2 bg-secondary/20 border border-secondary/40 text-secondary rounded-full px-5 py-2 text-sm font-semibold mb-6 uppercase tracking-wider animate-float">
+            <div className="inline-flex items-center gap-2 bg-secondary/20 border border-secondary/40 text-secondary rounded-full px-5 py-2 text-sm font-semibold mb-6 uppercase tracking-wider animate-float" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.6)" }}>
               <Shield size={14} />
               Licensed & Certified Gas Distributor
             </div>
           </FadeIn>
           <FadeIn direction="up" delay={100}>
-            <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-4 tracking-tight">
+            <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-4 tracking-tight" style={{ textShadow: "0 2px 16px rgba(0,0,0,0.7), 0 4px 32px rgba(0,0,0,0.4)" }}>
               Matiyane Gas
-              <span className="block text-secondary">Distributors</span>
+              <span className="block text-secondary" style={{ textShadow: "0 2px 16px rgba(0,0,0,0.7), 0 4px 32px rgba(0,0,0,0.4)" }}>Distributors</span>
             </h1>
           </FadeIn>
           <FadeIn direction="up" delay={200}>
-            <p className="text-xl md:text-2xl text-white/80 font-light mb-2">
+            <p className="text-xl md:text-2xl text-white font-medium mb-2" style={{ textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>
               Safe, Reliable and Affordable
             </p>
-            <p className="text-base text-white/60 max-w-xl mx-auto">
+            <p className="text-base text-white max-w-xl" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
               Serving Kempton Park and surrounding areas with quality LPG gas refills, installations, and COCs — delivered to your door.
             </p>
           </FadeIn>
@@ -141,7 +171,7 @@ export default function HomePage() {
             <TextCarousel />
           </FadeIn>
           <FadeIn direction="up" delay={400}>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
+            <div className="flex flex-col sm:flex-row gap-4 mt-10 justify-center md:justify-start">
               <Link href="/order">
                 <Button size="lg" className="bg-secondary text-white hover:bg-secondary/90 font-bold rounded-full px-10 py-4 text-base shadow-xl shadow-secondary/30 animate-pulse-glow">
                   Order Gas Now
@@ -156,7 +186,7 @@ export default function HomePage() {
             </div>
           </FadeIn>
           <FadeIn direction="up" delay={500}>
-            <div className="mt-10 flex flex-wrap gap-6 justify-center text-sm text-white/60">
+            <div className="mt-10 flex flex-wrap gap-6 text-sm text-white font-medium" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
               <span className="flex items-center gap-2 hover:text-secondary transition-colors"><Phone size={14} className="text-secondary" /> 076 748 8597</span>
               <span className="flex items-center gap-2 hover:text-secondary transition-colors"><Phone size={14} className="text-secondary" /> 082 467 6584</span>
             </div>
